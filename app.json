@@ -1,13 +1,26 @@
 {
   "expo": {
-    "name": "nearby-pro",
-    "slug": "nearby-pro",
+    "name": "Proxiland",
+    "slug": "proxiland",
     "version": "1.0.0",
+    "scheme": "proxiland",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "experiments": {
+      "typedRoutes": true
+    },
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "com.mingjzhu.proxiland",
+      "supportsTablet": true,
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Proxiland uses your location, only while the app is open and only when you turn on visibility, to show you nearby professionals and let them see you.",
+        "NSPhotoLibraryUsageDescription": "Proxiland needs access to your photos so you can set a profile picture.",
+        "NSCameraUsageDescription": "Proxiland needs camera access so you can take a profile picture."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -20,6 +33,23 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "@react-native-community/datetimepicker"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d792fc2e-52ba-4e37-9f5b-636200e20ff4"
+      }
+    },
+    "owner": "mingjzhu",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d792fc2e-52ba-4e37-9f5b-636200e20ff4"
     }
   }
 }
