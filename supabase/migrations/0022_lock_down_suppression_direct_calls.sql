@@ -1,0 +1,11 @@
+-- Hardening found while empirically verifying the previous fix: suppression_for_user is
+-- only meant to be called internally by individual_cards_for_scope (which already
+-- enforces scope membership before it ever gets there), not hit directly by clients. Its
+-- security definer status (needed for the legitimate internal use) also means any
+-- authenticated caller can currently probe it directly for an arbitrary other user's
+-- boolean keep_* flags and match_count. Not a raw-data leak — no actual field values are
+-- returned — but it's an unnecessary oracle. Revoking direct EXECUTE from `authenticated`
+-- closes it without affecting the internal call: a security definer function's internal
+-- calls run under the elevated owner role, which retains its own execute rights
+-- regardless of what's granted to `authenticated`.
+revoke execute on function suppression_for_user(uuid, uuid[], int) from authenticated;

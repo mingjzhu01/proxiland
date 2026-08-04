@@ -1,0 +1,13 @@
+{
+  "input": "Building the future of consumer AI. Ex-nothing, this is my first real thing, bootstrapped, no funding yet.",
+  "expected": {
+    "role_category": "founder",
+    "seniority_band": "early",
+    "industry": "consumer",
+    "stage": "pre seed",
+    "school": null,
+    "prior_employer": null,
+    "tenure_band": null
+  },
+  "note": "Tests whether 'no funding yet' correctly maps to the earliest stage bucket (pre seed) rather than null, and that 'ex-nothing' correctly yields prior_employer: null rather than a hallucinated value."
+}

@@ -23,7 +23,17 @@ export async function getProfile(userId: string): Promise<Profile | null> {
     .maybeSingle();
 
   if (error) throw error;
-  return data;
+  if (data) return data;
+
+  // Not self and not connected — direct table read returns nothing under RLS (migration
+  // 0025). Fall back to the reciprocity-gated RPC: still visible if we're both currently
+  // opted into nearby visibility and in range, matching nearby_users()' own gate.
+  const { data: nearbyData, error: nearbyError } = await supabase
+    .rpc('get_nearby_profile', { p_target_id: userId })
+    .maybeSingle();
+
+  if (nearbyError) throw nearbyError;
+  return (nearbyData as Profile) ?? null;
 }
 
 export async function upsertMyProfile(

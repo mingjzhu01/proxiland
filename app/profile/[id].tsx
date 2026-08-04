@@ -11,12 +11,13 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  Linking,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { getProfile } from '../../lib/api/profile';
 import { sendRequest } from '../../lib/api/requests';
-import { blockUser, reportUser, isConnectedTo } from '../../lib/api/connections';
+import { blockUser, reportUser, getConnectionWith } from '../../lib/api/connections';
 import { formatEducation } from '../../lib/formatEducation';
 import type { Profile } from '../../lib/types';
 
@@ -24,7 +25,8 @@ export default function ProfileDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [connectionId, setConnectionId] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
 
   const [coffeeModalVisible, setCoffeeModalVisible] = useState(false);
@@ -36,8 +38,12 @@ export default function ProfileDetail() {
   useFocusEffect(
     useCallback(() => {
       if (!id) return;
-      getProfile(id).then(setProfile);
-      isConnectedTo(id).then(setIsConnected);
+      setHasLoaded(false);
+      getProfile(id).then((p) => {
+        setProfile(p);
+        setHasLoaded(true);
+      });
+      getConnectionWith(id).then(setConnectionId);
     }, [id])
   );
 
@@ -79,7 +85,7 @@ export default function ProfileDetail() {
 
   function handleBlockOrReport() {
     if (!id) return;
-    Alert.alert('Block or report', undefined, [
+    Alert.alert('Block or Report', undefined, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Block',
@@ -103,7 +109,7 @@ export default function ProfileDetail() {
   if (!profile) {
     return (
       <View style={styles.centered}>
-        <Text>Loading…</Text>
+        <Text>{hasLoaded ? "This profile isn't available right now." : 'Loading…'}</Text>
       </View>
     );
   }
@@ -119,6 +125,14 @@ export default function ProfileDetail() {
       )}
 
       <Text style={styles.name}>{profile.full_name}</Text>
+      {profile.linkedin_verified ? (
+        <Text style={styles.verifiedBadge}>✓ LinkedIn Verified</Text>
+      ) : null}
+      {profile.linkedin_url ? (
+        <Pressable onPress={() => Linking.openURL(profile.linkedin_url!)}>
+          <Text style={styles.linkedinLink}>View LinkedIn profile</Text>
+        </Pressable>
+      ) : null}
       {profile.headline ? <Text style={styles.headline}>{profile.headline}</Text> : null}
       {(profile.title || profile.employer) ? (
         <Text style={styles.subtitle}>
@@ -135,14 +149,22 @@ export default function ProfileDetail() {
         </>
       ) : null}
 
-      {isConnected ? (
-        <Pressable
-          style={[styles.button, styles.coffeeButton, isSending && styles.buttonDisabled]}
-          onPress={() => setCoffeeModalVisible(true)}
-          disabled={isSending}
-        >
-          <Text style={styles.buttonText}>☕ Ask for coffee</Text>
-        </Pressable>
+      {connectionId ? (
+        <>
+          <Pressable
+            style={styles.button}
+            onPress={() => router.push(`/chat/${connectionId}`)}
+          >
+            <Text style={styles.buttonText}>💬 Message</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.button, styles.coffeeButton, isSending && styles.buttonDisabled]}
+            onPress={() => setCoffeeModalVisible(true)}
+            disabled={isSending}
+          >
+            <Text style={styles.buttonText}>☕ Ask for coffee</Text>
+          </Pressable>
+        </>
       ) : (
         <>
           <Pressable
@@ -157,7 +179,7 @@ export default function ProfileDetail() {
       )}
 
       <Pressable style={styles.reportLink} onPress={handleBlockOrReport}>
-        <Text style={styles.reportLinkText}>Block or report</Text>
+        <Text style={styles.reportLinkText}>Block or Report</Text>
       </Pressable>
 
       <Modal visible={coffeeModalVisible} animationType="slide" transparent>
@@ -228,6 +250,8 @@ const styles = StyleSheet.create({
   avatarInitial: { fontSize: 40, fontWeight: '700', color: '#555' },
   name: { fontSize: 22, fontWeight: '700' },
   headline: { fontSize: 15, color: '#555', marginTop: 4, textAlign: 'center' },
+  verifiedBadge: { color: '#0A66C2', fontWeight: '700', fontSize: 13, marginTop: 6 },
+  linkedinLink: { color: '#0A66C2', fontSize: 13, marginTop: 4, textDecorationLine: 'underline' },
   subtitle: { fontSize: 14, color: '#333', marginTop: 4 },
   divider: { width: '100%', height: 1, backgroundColor: '#eee', marginTop: 20 },
   bio: { fontSize: 14, color: '#444', marginTop: 16, textAlign: 'center' },

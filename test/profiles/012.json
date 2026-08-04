@@ -1,0 +1,13 @@
+{
+  "input": "Ming Zhu — Senior Associate at Innosight advising Fortune 500 companies on growth strategy; before that, Regional Development Manager at Crop One (Series B agtech, world's largest vertical farm), led a $40M JV with Emirates Flight Catering; earlier, investor at Anterra Capital, an early-stage agrifood-tech VC in Amsterdam. Currently leads APAC investments at Nourish Ventures (Griffith Foods' corporate VC arm). MBA from Harvard Business School.",
+  "expected": {
+    "role_category": "investor",
+    "seniority_band": "senior",
+    "industry": "foodtech",
+    "stage": null,
+    "school": "Harvard Business School",
+    "prior_employer": "Innosight",
+    "tenure_band": null
+  },
+  "note": "Realistic full-resume-paste case (the app's actual demo/reviewer profile). Tests that the model correctly identifies the CURRENT/most recent role (investor at Nourish Ventures) as authoritative over the multiple prior roles listed, and industry as foodtech/agtech rather than defaulting to 'enterprise' just because Innosight (consulting) is mentioned first. prior_employer should reflect the most recent PRIOR role (Innosight), not an older one (Anterra Capital) or the current employer (Nourish Ventures)."
+}

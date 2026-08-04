@@ -1,12 +1,23 @@
+import { useEffect } from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useRequestsBadge } from '../../lib/requestsBadge';
+import { useMessagesBadge } from '../../lib/messagesBadge';
+import { logSessionEvent } from '../../lib/api/instrumentation';
+import { IntentStatePrompt } from '../../components/IntentStatePrompt';
 
 export default function TabsLayout() {
   const { pendingCount } = useRequestsBadge();
+  const { unreadCount } = useMessagesBadge();
+
+  useEffect(() => {
+    logSessionEvent('session_open');
+  }, []);
 
   return (
-    <Tabs screenOptions={{ tabBarActiveTintColor: '#111' }}>
+    <>
+      <IntentStatePrompt />
+      <Tabs screenOptions={{ tabBarActiveTintColor: '#111' }}>
       <Tabs.Screen
         name="nearby"
         options={{
@@ -35,6 +46,7 @@ export default function TabsLayout() {
         name="connections"
         options={{
           title: 'Connections',
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
           tabBarIcon: ({ color, size }) => <Ionicons name="people" color={color} size={size} />,
         }}
       />
@@ -45,6 +57,7 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size }) => <Ionicons name="person" color={color} size={size} />,
         }}
       />
-    </Tabs>
+      </Tabs>
+    </>
   );
 }

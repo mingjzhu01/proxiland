@@ -1,0 +1,13 @@
+{
+  "input": "10+ years in enterprise software sales and ops leadership, most recently ran business development for a mid-size logistics company. Not looking to relocate.",
+  "expected": {
+    "role_category": "operator",
+    "seniority_band": "senior",
+    "industry": "logistics",
+    "stage": null,
+    "school": null,
+    "prior_employer": null,
+    "tenure_band": "5y plus"
+  },
+  "note": "Tests that irrelevant personal preference text ('not looking to relocate') is correctly ignored rather than mapped into any field."
+}

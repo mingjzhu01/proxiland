@@ -1,53 +1,32 @@
+// Locked, read-only view of your own profile. All editing (including first-time setup)
+// happens in app/edit-profile.tsx — this screen just displays the result, with a single
+// Edit button at the bottom.
 import { useCallback, useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Image,
-  Pressable,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '../../lib/supabase';
-import { getMyProfile, upsertMyProfile, uploadProfilePhoto } from '../../lib/api/profile';
-import type { GradDegreeType, Profile } from '../../lib/types';
-
-const GRAD_DEGREE_OPTIONS: GradDegreeType[] = ['Masters', 'MBA', 'PhD'];
-
-const emptyProfile: Omit<Profile, 'id' | 'created_at'> = {
-  full_name: '',
-  headline: '',
-  employer: '',
-  title: '',
-  undergrad_school: '',
-  undergrad_year: '',
-  grad_degree_type: null,
-  grad_school: '',
-  grad_year: '',
-  photo_url: '',
-  bio: '',
-};
+import { getMyProfile } from '../../lib/api/profile';
+import { getMyProfileAttributes, type ProfileAttributes } from '../../lib/api/onboarding';
+import { formatEducation } from '../../lib/formatEducation';
+import { ROLE_CATEGORY_LABELS, SENIORITY_BAND_LABELS, INDUSTRY_LABELS } from '../../lib/allowedValues';
+import type { Profile } from '../../lib/types';
 
 export default function MyProfile() {
   const router = useRouter();
-  const [profile, setProfile] = useState<Omit<Profile, 'id' | 'created_at'>>(emptyProfile);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [attrs, setAttrs] = useState<ProfileAttributes | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [emailConfirmed, setEmailConfirmed] = useState(true);
+  const [isResending, setIsResending] = useState(false);
 
   const load = useCallback(async () => {
-    const data = await getMyProfile();
-    if (data) {
-      setUserId(data.id);
-      setProfile(data);
-    } else {
-      const { data: userData } = await supabase.auth.getUser();
-      setUserId(userData.user?.id ?? null);
-    }
+    const { data: userData } = await supabase.auth.getUser();
+    setUserEmail(userData.user?.email ?? null);
+    setEmailConfirmed(!!userData.user?.email_confirmed_at);
+
+    const [p, a] = await Promise.all([getMyProfile(), getMyProfileAttributes()]);
+    setProfile(p);
+    setAttrs(a);
   }, []);
 
   useFocusEffect(
@@ -56,206 +35,177 @@ export default function MyProfile() {
     }, [load])
   );
 
-  async function handlePickPhoto() {
-    if (!userId) return;
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (result.canceled) return;
-
-    try {
-      const url = await uploadProfilePhoto(userId, result.assets[0].uri);
-      setProfile((p) => ({ ...p, photo_url: url }));
-      await upsertMyProfile({ photo_url: url });
-    } catch (error: any) {
-      Alert.alert('Upload failed', error.message);
-    }
-  }
-
-  async function handleSave() {
-    setIsSaving(true);
-    try {
-      await upsertMyProfile(profile);
-      Alert.alert('Saved', 'Your profile has been updated.');
-    } catch (error: any) {
-      Alert.alert('Save failed', error.message);
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
   async function handleSignOut() {
     await supabase.auth.signOut();
   }
 
-  function toggleGradDegreeType(type: GradDegreeType) {
-    setProfile((p) => ({
-      ...p,
-      grad_degree_type: p.grad_degree_type === type ? null : type,
-    }));
+  async function handleResendVerification() {
+    if (!userEmail) return;
+    setIsResending(true);
+    try {
+      const { error } = await supabase.auth.resend({ type: 'signup', email: userEmail });
+      if (error) throw error;
+      Alert.alert('Sent', 'Check your email for a verification link.');
+    } catch (error: any) {
+      Alert.alert('Could not send', error.message);
+    } finally {
+      setIsResending(false);
+    }
   }
 
+  if (!profile) {
+    return (
+      <View style={styles.centered}>
+        <Text>Loading…</Text>
+      </View>
+    );
+  }
+
+  const line = attrs?.line_polished ?? attrs?.line_assembled ?? null;
+  const education = formatEducation(profile);
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Pressable style={styles.avatarWrap} onPress={handlePickPhoto}>
-          {profile.photo_url ? (
-            <Image source={{ uri: profile.photo_url }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
-              <Text style={styles.avatarPlaceholderText}>Add photo</Text>
-            </View>
-          )}
-        </Pressable>
-
-        <Field label="Full name" value={profile.full_name} onChangeText={(v) => setProfile((p) => ({ ...p, full_name: v }))} />
-        <Field label="Headline" value={profile.headline ?? ''} onChangeText={(v) => setProfile((p) => ({ ...p, headline: v }))} />
-        <Field label="Employer" value={profile.employer ?? ''} onChangeText={(v) => setProfile((p) => ({ ...p, employer: v }))} />
-        <Field label="Title" value={profile.title ?? ''} onChangeText={(v) => setProfile((p) => ({ ...p, title: v }))} />
-
-        <Text style={styles.sectionLabel}>Undergrad</Text>
-        <View style={styles.row}>
-          <Field
-            label="School"
-            value={profile.undergrad_school ?? ''}
-            onChangeText={(v) => setProfile((p) => ({ ...p, undergrad_school: v }))}
-            containerStyle={styles.rowFieldWide}
-          />
-          <Field
-            label="Year"
-            value={profile.undergrad_year ?? ''}
-            onChangeText={(v) => setProfile((p) => ({ ...p, undergrad_year: v }))}
-            keyboardType="number-pad"
-            containerStyle={styles.rowFieldNarrow}
-          />
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {!emailConfirmed ? (
+        <View style={styles.securityBanner}>
+          <Text style={styles.securityBannerTitle}>Verify your email</Text>
+          <Text style={styles.securityBannerText}>
+            Confirming your email helps keep Proxiland trustworthy for everyone.
+          </Text>
+          <Pressable
+            style={[styles.securityBannerButton, isResending && styles.buttonDisabled]}
+            onPress={handleResendVerification}
+            disabled={isResending}
+          >
+            <Text style={styles.securityBannerButtonText}>
+              {isResending ? 'Sending…' : 'Resend verification email'}
+            </Text>
+          </Pressable>
         </View>
+      ) : null}
 
-        <Text style={styles.sectionLabel}>Advanced degree</Text>
-        <View style={styles.chipRow}>
-          {GRAD_DEGREE_OPTIONS.map((type) => (
-            <Pressable
-              key={type}
-              style={[styles.chip, profile.grad_degree_type === type && styles.chipSelected]}
-              onPress={() => toggleGradDegreeType(type)}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  profile.grad_degree_type === type && styles.chipTextSelected,
-                ]}
-              >
-                {type}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {profile.grad_degree_type ? (
-          <View style={styles.row}>
-            <Field
-              label="School"
-              value={profile.grad_school ?? ''}
-              onChangeText={(v) => setProfile((p) => ({ ...p, grad_school: v }))}
-              containerStyle={styles.rowFieldWide}
-            />
-            <Field
-              label="Year"
-              value={profile.grad_year ?? ''}
-              onChangeText={(v) => setProfile((p) => ({ ...p, grad_year: v }))}
-              keyboardType="number-pad"
-              containerStyle={styles.rowFieldNarrow}
-            />
+      <View style={styles.avatarWrap}>
+        {profile.photo_url ? (
+          <Image source={{ uri: profile.photo_url }} style={styles.avatar} />
+        ) : (
+          <View style={[styles.avatar, styles.avatarPlaceholder]}>
+            <Text style={styles.avatarPlaceholderText}>No photo</Text>
           </View>
-        ) : null}
+        )}
+      </View>
 
-        <Field label="Bio" value={profile.bio ?? ''} onChangeText={(v) => setProfile((p) => ({ ...p, bio: v }))} multiline />
+      <Text style={styles.name}>{profile.full_name || 'Unnamed'}</Text>
 
-        <Pressable style={[styles.button, isSaving && styles.buttonDisabled]} onPress={handleSave} disabled={isSaving}>
-          <Text style={styles.buttonText}>{isSaving ? 'Saving…' : 'Save profile'}</Text>
-        </Pressable>
+      {line ? (
+        <View style={styles.anonSection}>
+          <Text style={styles.anonLabel}>How you appear</Text>
+          <Text style={styles.anonLine}>{line}</Text>
+        </View>
+      ) : null}
 
-        <Pressable style={styles.blockedLink} onPress={() => router.push('/blocked-users')}>
-          <Text style={styles.blockedLinkText}>Blocked users</Text>
-        </Pressable>
+      {profile.headline ? <Text style={styles.headline}>{profile.headline}</Text> : null}
 
-        <Pressable style={styles.signOutButton} onPress={handleSignOut}>
-          <Text style={styles.signOutText}>Sign out</Text>
-        </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      {(profile.title || profile.employer) ? (
+        <Row label="Employer & title" value={[profile.title, profile.employer].filter(Boolean).join(' at ')} />
+      ) : null}
+      {education ? <Row label="Education" value={education} /> : null}
+      {profile.bio ? <Row label="Bio" value={profile.bio} /> : null}
+
+      {attrs ? (
+        <>
+          <Row
+            label="Role / Industry / Seniority"
+            value={[
+              ROLE_CATEGORY_LABELS[attrs.role_category],
+              INDUSTRY_LABELS[attrs.industry],
+              SENIORITY_BAND_LABELS[attrs.seniority_band],
+            ].join(' · ')}
+          />
+          {attrs.looking_for ? <Row label="Looking for" value={attrs.looking_for} /> : null}
+          {attrs.can_offer ? <Row label="Can offer" value={attrs.can_offer} /> : null}
+        </>
+      ) : null}
+
+      <View style={styles.linkedinRow}>
+        {profile.linkedin_verified ? (
+          <Text style={styles.verifiedBadge}>✓ LinkedIn Verified</Text>
+        ) : (
+          <Text style={styles.notVerified}>LinkedIn not verified</Text>
+        )}
+      </View>
+
+      <Pressable style={styles.editButton} onPress={() => router.push('/edit-profile')}>
+        <Text style={styles.editButtonText}>Edit profile</Text>
+      </Pressable>
+
+      <Pressable style={styles.blockedLink} onPress={() => router.push('/blocked-users')}>
+        <Text style={styles.blockedLinkText}>Blocked users</Text>
+      </Pressable>
+
+      <Pressable style={styles.signOutButton} onPress={handleSignOut}>
+        <Text style={styles.signOutText}>Sign out</Text>
+      </Pressable>
+    </ScrollView>
   );
 }
 
-function Field({
-  label,
-  value,
-  onChangeText,
-  multiline,
-  keyboardType,
-  containerStyle,
-}: {
-  label: string;
-  value: string;
-  onChangeText: (v: string) => void;
-  multiline?: boolean;
-  keyboardType?: 'default' | 'number-pad';
-  containerStyle?: object;
-}) {
+function Row({ label, value }: { label: string; value: string }) {
   return (
-    <View style={[styles.field, containerStyle]}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <TextInput
-        style={[styles.input, multiline && styles.inputMultiline]}
-        value={value}
-        onChangeText={onChangeText}
-        multiline={multiline}
-        keyboardType={keyboardType}
-      />
+    <View style={styles.row}>
+      <Text style={styles.rowLabel}>{label}</Text>
+      <Text style={styles.rowValue}>{value}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  content: { padding: 20, paddingBottom: 60, gap: 4 },
-  avatarWrap: { alignSelf: 'center', marginBottom: 20 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  content: { padding: 20, paddingBottom: 60 },
+  avatarWrap: { alignSelf: 'center', marginBottom: 12 },
   avatar: { width: 100, height: 100, borderRadius: 50 },
   avatarPlaceholder: { backgroundColor: '#eee', justifyContent: 'center', alignItems: 'center' },
   avatarPlaceholderText: { color: '#888', fontSize: 12 },
-  field: { marginBottom: 14 },
-  fieldLabel: { fontSize: 13, color: '#666', marginBottom: 4 },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 15 },
-  inputMultiline: { minHeight: 80, textAlignVertical: 'top' },
-  sectionLabel: { fontSize: 13, fontWeight: '700', color: '#333', marginTop: 8, marginBottom: 8 },
-  row: { flexDirection: 'row', gap: 10 },
-  rowFieldWide: { flex: 2 },
-  rowFieldNarrow: { flex: 1 },
-  chipRow: { flexDirection: 'row', gap: 8, marginBottom: 14 },
-  chip: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
+  name: { fontSize: 22, fontWeight: '700', textAlign: 'center' },
+  headline: { fontSize: 14, color: '#555', textAlign: 'center', marginTop: 4, marginBottom: 8 },
+  anonSection: {
+    backgroundColor: '#fafafa',
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 16,
+    marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: '#eee',
   },
-  chipSelected: { backgroundColor: '#111', borderColor: '#111' },
-  chipText: { fontSize: 13, fontWeight: '600', color: '#555' },
-  chipTextSelected: { color: '#fff' },
-  button: { backgroundColor: '#111', borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 12 },
+  anonLabel: { fontSize: 12, fontWeight: '700', color: '#888', marginBottom: 4 },
+  anonLine: { fontSize: 15, color: '#111' },
+  row: { marginTop: 16 },
+  rowLabel: { fontSize: 12, color: '#888', marginBottom: 2 },
+  rowValue: { fontSize: 15, color: '#111' },
+  linkedinRow: { marginTop: 20, alignItems: 'center' },
+  verifiedBadge: { color: '#0A66C2', fontWeight: '700', fontSize: 14 },
+  notVerified: { color: '#999', fontSize: 13 },
+  editButton: { backgroundColor: '#111', borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 28 },
+  editButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  securityBanner: {
+    backgroundColor: '#fdf6ee',
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#f0dfc4',
+  },
+  securityBannerTitle: { fontSize: 14, fontWeight: '700', color: '#a05a2c' },
+  securityBannerText: { fontSize: 13, color: '#775a3c', marginTop: 4 },
+  securityBannerButton: {
+    backgroundColor: '#a05a2c',
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  securityBannerButtonText: { color: '#fff', fontSize: 13, fontWeight: '600' },
   blockedLink: { alignItems: 'center', marginTop: 24 },
   blockedLinkText: { color: '#666', fontSize: 14 },
   signOutButton: { alignItems: 'center', marginTop: 12 },

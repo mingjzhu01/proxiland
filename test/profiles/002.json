@@ -1,0 +1,13 @@
+{
+  "input": "VC investing in fintech and consumer, ex Goldman Sachs investment banking, Wharton MBA.",
+  "expected": {
+    "role_category": "investor",
+    "seniority_band": "senior",
+    "industry": "fintech",
+    "stage": null,
+    "school": "Wharton",
+    "prior_employer": "Goldman Sachs",
+    "tenure_band": null
+  },
+  "note": "Mirrors the identification-risk example from spec section 8."
+}

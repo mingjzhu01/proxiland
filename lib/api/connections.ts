@@ -23,9 +23,9 @@ export async function getMyConnections(): Promise<Connection[]> {
   }));
 }
 
-export async function isConnectedTo(otherId: string): Promise<boolean> {
+export async function getConnectionWith(otherId: string): Promise<string | null> {
   const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) return false;
+  if (!userData.user) return null;
   const myId = userData.user.id;
 
   const userA = myId < otherId ? myId : otherId;
@@ -39,7 +39,7 @@ export async function isConnectedTo(otherId: string): Promise<boolean> {
     .maybeSingle();
 
   if (error) throw error;
-  return !!data;
+  return data?.id ?? null;
 }
 
 export async function blockUser(targetId: string): Promise<void> {

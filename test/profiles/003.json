@@ -1,0 +1,13 @@
+{
+  "input": "Second year CS student at NUS, interned at a healthtech startup last summer, looking to break into product.",
+  "expected": {
+    "role_category": "student",
+    "seniority_band": "early",
+    "industry": "healthtech",
+    "stage": null,
+    "school": "NUS",
+    "prior_employer": null,
+    "tenure_band": null
+  },
+  "note": "Student role, minimal work history."
+}

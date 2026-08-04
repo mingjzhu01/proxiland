@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
-import { View, FlatList, Text, StyleSheet, RefreshControl, Alert } from 'react-native';
+import { View, FlatList, Text, Pressable, StyleSheet, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { ProfileCard } from '../../components/ProfileCard';
 import { getMyConnections } from '../../lib/api/connections';
 import type { Connection } from '../../lib/types';
@@ -38,18 +39,25 @@ export default function Connections() {
         }
         renderItem={({ item }) =>
           item.other ? (
-            <ProfileCard
-              name={item.other.full_name}
-              headline={item.other.headline}
-              employer={item.other.employer}
-              title={item.other.title}
-              undergradSchool={item.other.undergrad_school}
-              undergradYear={item.other.undergrad_year}
-              gradSchool={item.other.grad_school}
-              gradYear={item.other.grad_year}
-              photoUrl={item.other.photo_url}
-              onPress={() => router.push(`/profile/${item.other!.id}`)}
-            />
+            <View style={styles.row}>
+              <View style={styles.cardWrap}>
+                <ProfileCard
+                  name={item.other.full_name}
+                  headline={item.other.headline}
+                  employer={item.other.employer}
+                  title={item.other.title}
+                  undergradSchool={item.other.undergrad_school}
+                  undergradYear={item.other.undergrad_year}
+                  gradSchool={item.other.grad_school}
+                  gradYear={item.other.grad_year}
+                  photoUrl={item.other.photo_url}
+                  onPress={() => router.push(`/profile/${item.other!.id}`)}
+                />
+              </View>
+              <Pressable style={styles.chatButton} onPress={() => router.push(`/chat/${item.id}`)}>
+                <Ionicons name="chatbubble-outline" size={20} color="#111" />
+              </Pressable>
+            </View>
           ) : null
         }
       />
@@ -60,4 +68,7 @@ export default function Connections() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   empty: { padding: 24, textAlign: 'center', color: '#888', fontSize: 14 },
+  row: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: '#eee' },
+  cardWrap: { flex: 1 },
+  chatButton: { paddingHorizontal: 16 },
 });

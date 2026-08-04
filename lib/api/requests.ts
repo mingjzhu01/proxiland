@@ -1,5 +1,6 @@
 import { supabase } from '../supabase';
 import type { ConnectionRequest, RequestType } from '../types';
+import { logSessionEvent } from './instrumentation';
 
 export async function sendRequest(
   receiverId: string,
@@ -20,6 +21,8 @@ export async function sendRequest(
   });
 
   if (error) throw error;
+
+  logSessionEvent('connect_request', { metadata: { type } });
 }
 
 export async function respondToRequest(
@@ -35,10 +38,19 @@ export async function respondToRequest(
 
   if (error) throw error;
 
-  if (status === 'accepted' && data.type === 'coffee' && data.meeting_at) {
-    // Best-effort: failure to send the calendar invite shouldn't fail the accept action.
-    supabase.functions.invoke('send-coffee-invite', { body: { requestId } }).catch(() => {});
+  if (status === 'accepted') {
+    logSessionEvent('connect_accept', { metadata: { type: data.type } });
+
+    if (data.type === 'coffee' && data.meeting_at) {
+      // Best-effort: failure to send the calendar invite shouldn't fail the accept action.
+      supabase.functions.invoke('send-coffee-invite', { body: { requestId } }).catch(() => {});
+    }
   }
+}
+
+export async function hideRequestForMe(requestId: string): Promise<void> {
+  const { error } = await supabase.rpc('hide_request_for_me', { request_id: requestId });
+  if (error) throw error;
 }
 
 export async function getIncomingRequests(): Promise<ConnectionRequest[]> {
@@ -69,7 +81,9 @@ export async function getScheduledCoffees(): Promise<ConnectionRequest[]> {
     .eq('type', 'coffee')
     .eq('status', 'accepted')
     .not('meeting_at', 'is', null)
-    .or(`sender_id.eq.${myId},receiver_id.eq.${myId}`)
+    .or(
+      `and(sender_id.eq.${myId},hidden_by_sender.eq.false),and(receiver_id.eq.${myId},hidden_by_receiver.eq.false)`
+    )
     .order('meeting_at', { ascending: true });
 
   if (error) throw error;
@@ -84,6 +98,7 @@ export async function getOutgoingRequests(): Promise<ConnectionRequest[]> {
     .from('connection_requests')
     .select('*, receiver:profiles!connection_requests_receiver_id_fkey(*)')
     .eq('sender_id', userData.user.id)
+    .eq('hidden_by_sender', false)
     .order('created_at', { ascending: false });
 
   if (error) throw error;

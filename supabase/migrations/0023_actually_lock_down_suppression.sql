@@ -1,0 +1,11 @@
+-- 0022 didn't actually work — proven by live retest immediately after running it, still
+-- HTTP 200 with a full result. Root cause: Postgres grants EXECUTE to the PUBLIC
+-- pseudo-role by default on every function unless explicitly revoked, and `authenticated`
+-- implicitly inherits from PUBLIC. Revoking only from `authenticated` left PUBLIC's grant
+-- (which every role, including `authenticated` and even `anon`, inherits from) fully
+-- intact. This likely applies to every function in this project by default — the ones
+-- that are SUPPOSED to be broadly callable aren't newly at risk (they already have their
+-- own internal auth.uid()-based authorization checks that correctly reject unauthenticated
+-- or unauthorized callers regardless of the coarse grant), but this one has no such
+-- internal check, which is exactly why it needed the grant itself revoked instead.
+revoke execute on function suppression_for_user(uuid, uuid[], int) from public;

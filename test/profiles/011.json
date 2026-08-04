@@ -1,0 +1,13 @@
+{
+  "input": "PhD candidate researching protein folding for drug discovery, published a few papers, considering leaving academia for a startup.",
+  "expected": {
+    "role_category": "researcher",
+    "seniority_band": "early",
+    "industry": "healthtech",
+    "stage": null,
+    "school": null,
+    "prior_employer": null,
+    "tenure_band": null
+  },
+  "note": "Tests industry inference from a technical/academic description (protein folding, drug discovery) that never says 'healthtech' or 'biotech' explicitly — closest allowed bucket is healthtech since biotech isn't in the current INDUSTRIES list. Flags a possible gap in the allowed industry list worth revisiting."
+}

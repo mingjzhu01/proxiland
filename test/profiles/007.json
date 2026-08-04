@@ -1,0 +1,13 @@
+{
+  "input": "researcher",
+  "expected": {
+    "role_category": "researcher",
+    "seniority_band": "any — no real signal in the input, flag for manual review rather than asserting a specific value",
+    "industry": "any — no real signal in the input, flag for manual review rather than asserting a specific value",
+    "stage": null,
+    "school": null,
+    "prior_employer": null,
+    "tenure_band": null
+  },
+  "note": "Minimal/degenerate input. seniority_band and industry are NOT NULL columns, so the model is forced to pick some enum value even with zero real signal — this case exists to catch hallucination (a confident-sounding school or employer invented from nothing), not to assert one 'correct' enum choice for the two forced fields."
+}

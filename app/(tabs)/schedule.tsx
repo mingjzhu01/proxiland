@@ -1,8 +1,9 @@
 import { useCallback, useState } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { getScheduledCoffees } from '../../lib/api/requests';
+import { getScheduledCoffees, hideRequestForMe } from '../../lib/api/requests';
 import { supabase } from '../../lib/supabase';
+import { SwipeToDelete } from '../../components/SwipeToDelete';
 import type { ConnectionRequest } from '../../lib/types';
 
 function formatMeetingTime(meetingAt: string | null): string {
@@ -41,12 +42,24 @@ export default function Schedule() {
     }, [load])
   );
 
+  async function handleDelete(id: string) {
+    try {
+      await hideRequestForMe(id);
+      setCoffees((list) => list.filter((c) => c.id !== id));
+    } catch (error: any) {
+      Alert.alert('Could not delete', error.message);
+    }
+  }
+
   return (
     <FlatList
       style={styles.container}
       data={coffees}
       keyExtractor={(item) => item.id}
       refreshControl={<RefreshControl refreshing={isLoading} onRefresh={load} />}
+      ListHeaderComponent={
+        coffees.length > 0 ? <Text style={styles.hint}>Swipe left to remove from your history</Text> : null
+      }
       ListEmptyComponent={
         !isLoading ? (
           <Text style={styles.empty}>No coffee chats scheduled yet.</Text>
@@ -55,17 +68,19 @@ export default function Schedule() {
       renderItem={({ item }) => {
         const other = item.sender_id === myId ? item.receiver : item.sender;
         return (
-          <Pressable
-            style={styles.row}
-            onPress={() => other && router.push(`/profile/${other.id}`)}
-          >
-            <Text style={styles.name}>☕ {other?.full_name ?? 'Someone'}</Text>
-            <Text style={styles.time}>{formatMeetingTime(item.meeting_at)}</Text>
-            {item.meeting_location ? (
-              <Text style={styles.location}>{item.meeting_location}</Text>
-            ) : null}
-            {item.message ? <Text style={styles.note}>{item.message}</Text> : null}
-          </Pressable>
+          <SwipeToDelete onDelete={() => handleDelete(item.id)}>
+            <Pressable
+              style={styles.row}
+              onPress={() => other && router.push(`/profile/${other.id}`)}
+            >
+              <Text style={styles.name}>☕ {other?.full_name ?? 'Someone'}</Text>
+              <Text style={styles.time}>{formatMeetingTime(item.meeting_at)}</Text>
+              {item.meeting_location ? (
+                <Text style={styles.location}>{item.meeting_location}</Text>
+              ) : null}
+              {item.message ? <Text style={styles.note}>{item.message}</Text> : null}
+            </Pressable>
+          </SwipeToDelete>
         );
       }}
     />
@@ -75,6 +90,7 @@ export default function Schedule() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   empty: { padding: 24, textAlign: 'center', color: '#888', fontSize: 14 },
+  hint: { paddingHorizontal: 16, paddingVertical: 8, color: '#aaa', fontSize: 11 },
   row: {
     padding: 16,
     borderBottomWidth: 1,

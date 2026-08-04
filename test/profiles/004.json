@@ -1,0 +1,13 @@
+{
+  "input": "AI engineer working on inference infrastructure. Also went to Wesleyan, small world. Been at it about 4 years, currently at a Series B logistics company.",
+  "expected": {
+    "role_category": "engineer",
+    "seniority_band": "mid",
+    "industry": "logistics",
+    "stage": "series b plus",
+    "school": "Wesleyan",
+    "prior_employer": null,
+    "tenure_band": "2 to 5y"
+  },
+  "note": "Matches the shared-connection example line from spec section 5."
+}

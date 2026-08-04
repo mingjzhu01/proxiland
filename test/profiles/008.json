@@ -1,0 +1,13 @@
+{
+  "input": "Early-stage investor focused on climate hardware, spent 3 years at a healthtech startup as a founding engineer before moving into investing full time.",
+  "expected": {
+    "role_category": "investor",
+    "seniority_band": "mid",
+    "industry": "climate",
+    "stage": null,
+    "school": null,
+    "prior_employer": null,
+    "tenure_band": null
+  },
+  "note": "Tests role disambiguation when the text describes two different roles (engineer, then investor) — current role (investor) should win, and industry should follow the CURRENT focus (climate), not the prior job's industry (healthtech)."
+}

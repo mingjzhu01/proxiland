@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
 import { goVisible, goInvisible, getMyActiveVisibility } from '../lib/api/visibility';
+import { DurationPicker } from './DurationPicker';
 
-const DURATION_OPTIONS_HOURS = [2, 4];
+const DEFAULT_DURATION_HOURS = 4;
 
 function timeRemaining(expiresAt: string): string {
   const ms = new Date(expiresAt).getTime() - Date.now();
@@ -14,6 +15,7 @@ function timeRemaining(expiresAt: string): string {
 
 export function VisibilityToggle({ onChange }: { onChange?: () => void }) {
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
+  const [selectedHours, setSelectedHours] = useState(DEFAULT_DURATION_HOURS);
   const [isBusy, setIsBusy] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -25,10 +27,10 @@ export function VisibilityToggle({ onChange }: { onChange?: () => void }) {
     refresh();
   }, [refresh]);
 
-  async function handleGoVisible(hours: number) {
+  async function handleGoVisible() {
     setIsBusy(true);
     try {
-      await goVisible(hours);
+      await goVisible(selectedHours);
       await refresh();
       onChange?.();
     } catch (error: any) {
@@ -68,33 +70,27 @@ export function VisibilityToggle({ onChange }: { onChange?: () => void }) {
   return (
     <View style={styles.container}>
       <Text style={styles.prompt}>You're not visible to anyone right now.</Text>
-      <View style={styles.optionsRow}>
-        {DURATION_OPTIONS_HOURS.map((hours) => (
-          <Pressable
-            key={hours}
-            style={styles.optionButton}
-            onPress={() => handleGoVisible(hours)}
-            disabled={isBusy}
-          >
-            <Text style={styles.optionButtonText}>Go visible for {hours}h</Text>
-          </Pressable>
-        ))}
-      </View>
+      <DurationPicker value={selectedHours} onChange={setSelectedHours} />
+      <Pressable style={styles.goButton} onPress={handleGoVisible} disabled={isBusy}>
+        <Text style={styles.goButtonText}>
+          {isBusy ? 'Going visible…' : `Go visible for ${selectedHours}h`}
+        </Text>
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { padding: 16, backgroundColor: '#fafafa', borderBottomWidth: 1, borderColor: '#eee' },
-  prompt: { fontSize: 14, color: '#555', marginBottom: 10 },
-  optionsRow: { flexDirection: 'row', gap: 8 },
-  optionButton: {
+  prompt: { fontSize: 14, color: '#555', marginBottom: 10, textAlign: 'center' },
+  goButton: {
     backgroundColor: '#111',
     borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginTop: 10,
   },
-  optionButtonText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  goButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2ecc71' },
   statusText: { fontSize: 14, fontWeight: '600', flex: 1 },

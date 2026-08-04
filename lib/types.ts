@@ -13,12 +13,14 @@ export type Profile = {
   grad_year: string | null;
   photo_url: string | null;
   bio: string | null;
+  linkedin_verified: boolean;
+  linkedin_url: string | null;
   created_at: string;
 };
 
 export type NearbyUser = {
   id: string;
-  full_name: string;
+  full_name: string | null;
   headline: string | null;
   employer: string | null;
   title: string | null;

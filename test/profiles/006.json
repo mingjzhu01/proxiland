@@ -1,0 +1,13 @@
+{
+  "input": "Product designer, foodtech, just joined a pre-seed startup a few months ago after five years at a bigger consumer company.",
+  "expected": {
+    "role_category": "designer",
+    "seniority_band": "mid",
+    "industry": "foodtech",
+    "stage": "pre seed",
+    "school": null,
+    "prior_employer": null,
+    "tenure_band": "under 2y"
+  },
+  "note": "Tenure should reflect time at the CURRENT role (under 2y), not the prior 5-year stint — tests whether the model anchors tenure_band correctly."
+}

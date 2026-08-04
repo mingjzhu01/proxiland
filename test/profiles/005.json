@@ -1,0 +1,13 @@
+{
+  "input": "Chief Operating Officer at a public enterprise SaaS company, been in the industry over a decade.",
+  "expected": {
+    "role_category": "operator",
+    "seniority_band": "executive",
+    "industry": "enterprise",
+    "stage": "public",
+    "school": null,
+    "prior_employer": null,
+    "tenure_band": "5y plus"
+  },
+  "note": "Executive seniority, public-stage company."
+}

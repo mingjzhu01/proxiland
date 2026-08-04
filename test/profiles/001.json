@@ -1,0 +1,13 @@
+{
+  "input": "I left Tesla two years ago to start something in carbon capture, we just closed our seed.",
+  "expected": {
+    "role_category": "founder",
+    "seniority_band": "mid",
+    "industry": "climate",
+    "stage": "seed",
+    "school": null,
+    "prior_employer": "Tesla",
+    "tenure_band": "2 to 5y"
+  },
+  "note": "The worked example from spec v4 section 6, job 1."
+}
