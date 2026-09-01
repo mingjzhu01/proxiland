@@ -13,6 +13,11 @@
 // Caching per pair (keyed by a fingerprint of both people's relevant fields, same pattern
 // as elsewhere) keeps this to once per relationship rather than once per view, same cost
 // discipline the original design was built around.
+//
+// Extended to also return a 0-3 strength score (0 = no overlap) — the Nearby feed now
+// computes overlap for everyone currently in view (not just on-demand via Expand) so it can
+// show "why you two" upfront and sort strangers by how strong the overlap is, and sorting
+// needs something to sort by.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { askModel } from '../_shared/ai.ts';
@@ -26,8 +31,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Content-Type': 'application/json',
 };
-
-const NONE_SENTINEL = 'NONE';
 
 // Loose safety net, not a strict fact-check (open-ended reasoning can't be verified the
 // same way a template rewrite can) — blocks the most obvious ways this could drift toward
@@ -78,10 +81,17 @@ Rules:
 - Only use facts explicitly stated above. Never invent, infer, or embellish anything not written.
 - Do not suggest they should meet, or use any commercial/sales language (never frame it as a business or investment opportunity).
 - Do not compare seniority or hierarchy.
-- If you find a genuine overlap, respond with ONLY one sentence, 25 words or fewer, describing it.
-- If there is no genuine overlap, respond with exactly: ${NONE_SENTINEL}
+- This same sentence is shown to both people, so phrase it symmetrically from a shared "you both" perspective (e.g. "You're both...", "You both..."). Never write "Person A" or "Person B" — those are internal labels only, not names to use in your response.
+- Rate how strong the overlap is:
+  0 = no genuine overlap at all
+  1 = one broad/coincidental overlap (e.g. same general industry)
+  2 = one solid, specific overlap (e.g. same school, same hometown, complementary looking-for/can-offer)
+  3 = multiple distinct overlaps, or one very specific/rare one (e.g. same exact employer, same niche field)
+- If strength is 0, phrase must be an empty string.
+- If strength is 1-3, phrase must be ONE sentence, 25 words or fewer, describing the overlap.
 
-Respond with ONLY the sentence or ${NONE_SENTINEL} — no prefix, no quotes, no markdown.`;
+Respond with ONLY this JSON shape, nothing else:
+{"strength": 0, "phrase": ""}`;
 }
 
 async function sha256(text: string): Promise<string> {
@@ -109,6 +119,22 @@ function isSafe(sentence: string): boolean {
   if (wordCount === 0 || wordCount > 25) return false;
   const lower = sentence.toLowerCase();
   return !BLOCKED_PHRASES.some((phrase) => lower.includes(phrase));
+}
+
+// Model responses (especially with any preamble) aren't guaranteed to be pure JSON — extract
+// the substring between the first { and last }, same fix already applied in draft-bio for the
+// same class of "I'll analyze these profiles..." preamble issue.
+function parseModelJson(text: string): { strength: number; phrase: string } | null {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start === -1 || end === -1 || end < start) return null;
+  try {
+    const parsed = JSON.parse(text.slice(start, end + 1));
+    if (typeof parsed.strength !== 'number' || typeof parsed.phrase !== 'string') return null;
+    return { strength: parsed.strength, phrase: parsed.phrase };
+  } catch {
+    return null;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -161,30 +187,30 @@ Deno.serve(async (req) => {
 
     const { data: cached } = await admin
       .from('overlap_cache')
-      .select('overlap_type, phrase, source_fingerprint')
+      .select('overlap_type, phrase, strength, source_fingerprint')
       .eq('user_a', userA)
       .eq('user_b', userB)
       .maybeSingle();
 
     if (cached && cached.source_fingerprint === fingerprint) {
-      return new Response(JSON.stringify({ overlap: { overlap_type: cached.overlap_type, phrase: cached.phrase } }), {
-        status: 200,
-        headers: corsHeaders,
-      });
+      const overlap =
+        cached.strength > 0 ? { overlap_type: cached.overlap_type, phrase: cached.phrase, strength: cached.strength } : null;
+      return new Response(JSON.stringify({ overlap }), { status: 200, headers: corsHeaders });
     }
 
-    const raw = (await askModel(buildPrompt(personA, personB), { maxTokens: 100 })).trim();
+    const raw = (await askModel(buildPrompt(personA, personB), { maxTokens: 150 })).trim();
+    const parsed = parseModelJson(raw);
 
-    if (raw === NONE_SENTINEL || !isSafe(raw)) {
-      await admin.from('overlap_cache').delete().eq('user_a', userA).eq('user_b', userB);
-      return new Response(JSON.stringify({ overlap: null }), { status: 200, headers: corsHeaders });
-    }
+    const strength = parsed && parsed.strength >= 0 && parsed.strength <= 3 ? Math.round(parsed.strength) : 0;
+    const phrase = strength > 0 && parsed && isSafe(parsed.phrase) ? parsed.phrase : '';
+    const finalStrength = phrase ? strength : 0;
 
     const { error: cacheError } = await admin.from('overlap_cache').upsert({
       user_a: userA,
       user_b: userB,
       overlap_type: 'ai_detected',
-      phrase: raw,
+      phrase: phrase || 'NONE',
+      strength: finalStrength,
       source_fingerprint: fingerprint,
     });
 
@@ -195,10 +221,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    return new Response(
-      JSON.stringify({ overlap: { overlap_type: 'ai_detected', phrase: raw } }),
-      { status: 200, headers: corsHeaders }
-    );
+    const overlap = finalStrength > 0 ? { overlap_type: 'ai_detected', phrase, strength: finalStrength } : null;
+    return new Response(JSON.stringify({ overlap }), { status: 200, headers: corsHeaders });
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,

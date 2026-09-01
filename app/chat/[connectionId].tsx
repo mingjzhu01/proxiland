@@ -10,23 +10,48 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useHeaderHeight } from '@react-navigation/elements';
+import { Ionicons } from '@expo/vector-icons';
 import { getMessages, sendMessage, subscribeToMessages, markConnectionRead, type Message } from '../../lib/api/messages';
-import { getMyConnections } from '../../lib/api/connections';
+import { getMyConnections, blockUser } from '../../lib/api/connections';
 import { supabase } from '../../lib/supabase';
 import { useMessagesBadge } from '../../lib/messagesBadge';
+import { ReportSheet } from '../../components/ReportSheet';
 
 export default function Chat() {
   const { connectionId } = useLocalSearchParams<{ connectionId: string }>();
   const navigation = useNavigation();
+  const router = useRouter();
   const headerHeight = useHeaderHeight();
   const [messages, setMessages] = useState<Message[]>([]);
   const [myId, setMyId] = useState<string | null>(null);
+  const [otherUserId, setOtherUserId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [reportVisible, setReportVisible] = useState(false);
   const listRef = useRef<FlatList>(null);
   const { refresh: refreshMessagesBadge } = useMessagesBadge();
+
+  function handleBlockOrReport() {
+    if (!otherUserId) return;
+    Alert.alert('Block or Report', undefined, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Block',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await blockUser(otherUserId);
+            router.back();
+          } catch (error: any) {
+            Alert.alert('Could not block', error.message ?? String(error));
+          }
+        },
+      },
+      { text: 'Report', onPress: () => setReportVisible(true) },
+    ]);
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -47,7 +72,19 @@ export default function Chat() {
         const connections = await getMyConnections();
         const conn = connections.find((c) => c.id === connectionId);
         if (conn?.other) {
-          navigation.setOptions({ title: conn.other.full_name });
+          setOtherUserId(conn.other.id);
+          navigation.setOptions({
+            title: conn.other.full_name,
+            headerRight: () => (
+              <Pressable
+                onPress={handleBlockOrReport}
+                hitSlop={12}
+                style={{ paddingHorizontal: 4 }}
+              >
+                <Ionicons name="ellipsis-horizontal" size={22} color="#111" />
+              </Pressable>
+            ),
+          });
         }
 
         await markConnectionRead(connectionId);
@@ -60,7 +97,8 @@ export default function Chat() {
       })();
 
       return () => unsubscribe?.();
-    }, [connectionId, navigation, refreshMessagesBadge])
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [connectionId, navigation, refreshMessagesBadge, otherUserId])
   );
 
   async function handleSend() {
@@ -70,7 +108,7 @@ export default function Chat() {
     setIsSending(true);
     setDraft('');
     try {
-      await sendMessage(connectionId, body);
+      await sendMessage(connectionId, body, otherUserId ?? undefined);
     } catch (error: any) {
       Alert.alert('Could not send message', error.message);
       setDraft(body);
@@ -80,6 +118,7 @@ export default function Chat() {
   }
 
   return (
+    <>
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -123,6 +162,13 @@ export default function Chat() {
         </Pressable>
       </View>
     </KeyboardAvoidingView>
+    <ReportSheet
+      visible={reportVisible}
+      targetUserId={otherUserId}
+      context="chat"
+      onClose={() => setReportVisible(false)}
+    />
+    </>
   );
 }
 

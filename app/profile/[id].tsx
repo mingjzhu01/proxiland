@@ -17,8 +17,9 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { getProfile } from '../../lib/api/profile';
 import { sendRequest } from '../../lib/api/requests';
-import { blockUser, reportUser, getConnectionWith } from '../../lib/api/connections';
+import { blockUser, getConnectionWith } from '../../lib/api/connections';
 import { formatEducation } from '../../lib/formatEducation';
+import { ReportSheet } from '../../components/ReportSheet';
 import type { Profile } from '../../lib/types';
 
 export default function ProfileDetail() {
@@ -34,6 +35,7 @@ export default function ProfileDetail() {
   const [coffeeLocation, setCoffeeLocation] = useState('');
   const [coffeeDate, setCoffeeDate] = useState(new Date());
   const [coffeeTime, setCoffeeTime] = useState(new Date());
+  const [reportVisible, setReportVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -95,14 +97,7 @@ export default function ProfileDetail() {
           router.back();
         },
       },
-      {
-        text: 'Report',
-        style: 'destructive',
-        onPress: async () => {
-          await reportUser(id, 'reported from profile view');
-          Alert.alert('Reported', 'Thanks — our team will review this.');
-        },
-      },
+      { text: 'Report', onPress: () => setReportVisible(true) },
     ]);
   }
 
@@ -115,6 +110,7 @@ export default function ProfileDetail() {
   }
 
   return (
+    <>
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {profile.photo_url ? (
         <Image source={{ uri: profile.photo_url }} style={styles.avatar} />
@@ -238,6 +234,13 @@ export default function ProfileDetail() {
         </KeyboardAvoidingView>
       </Modal>
     </ScrollView>
+    <ReportSheet
+      visible={reportVisible}
+      targetUserId={id ?? null}
+      context="profile"
+      onClose={() => setReportVisible(false)}
+    />
+    </>
   );
 }
 

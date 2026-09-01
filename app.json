@@ -2,7 +2,7 @@
   "expo": {
     "name": "Proxiland",
     "slug": "proxiland",
-    "version": "1.0.0",
+    "version": "1.0.3",
     "scheme": "proxiland",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -12,7 +12,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.mingjzhu.proxiland",
-      "supportsTablet": true,
+      "supportsTablet": false,
       "config": {
         "usesNonExemptEncryption": false
       },
@@ -37,7 +37,22 @@
     "plugins": [
       "expo-router",
       "@react-native-community/datetimepicker",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#3b5bdb"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/icon.png",
+          "resizeMode": "cover",
+          "backgroundColor": "#4A3B31"
+        }
+      ]
     ],
     "extra": {
       "router": {},

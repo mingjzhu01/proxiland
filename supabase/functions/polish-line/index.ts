@@ -50,10 +50,29 @@ function tokenize(text: string): string[] {
     .filter((w) => w.length > 0);
 }
 
+// Only scrutinize tokens that could actually smuggle in a fabricated fact — a capitalized
+// proper noun (a company/school name) or a standalone number (a year, a count) — against the
+// approved word set. Ordinary lowercase descriptive/connecting prose is exempt: it can vary
+// freely between regenerations without being able to invent a company, school, or credential.
+// (Previously every single word had to literally appear in the source facts, which rejected
+// almost all natural phrasing — e.g. "alum" instead of "grad" — and silently fell back to the
+// same deterministic template on every regenerate, which is why regenerating looked like a
+// no-op even though the model really was writing something different each time.)
 function verifyNoInventedFacts(polished: string, approvedFacts: string[]): boolean {
   const approvedWords = new Set(approvedFacts.flatMap((f) => tokenize(f)));
-  const polishedWords = tokenize(polished);
-  return polishedWords.every((w) => approvedWords.has(w) || ALLOWED_CONNECTORS.has(w));
+  // Must split the same way tokenize() does (apostrophe as a separator, not a word character)
+  // — otherwise a verbatim "School'22" copy becomes one glued token that can never match the
+  // separately-tokenized "school" + "22" in approvedWords, rejecting the model for correctly
+  // following the exact-formatting instruction.
+  const rawWords = polished.match(/[A-Za-z0-9]+/g) ?? [];
+
+  return rawWords.every((word, i) => {
+    const lower = word.toLowerCase();
+    if (approvedWords.has(lower) || ALLOWED_CONNECTORS.has(lower)) return true;
+    const isNumber = /^\d+$/.test(word);
+    const isProperNoun = i > 0 && /^[A-Z]/.test(word);
+    return !isNumber && !isProperNoun;
+  });
 }
 
 function yearSuffix(year: string | null | undefined): string {
@@ -103,21 +122,45 @@ function describeFacts(profile: Record<string, unknown>, formattedEducation: str
   return lines.join('\n');
 }
 
-function buildPrompt(facts: string, bio: string | null): string {
-  return `Based on this person's profile information, write a compelling one-line professional headline for a networking app — the way a sharp person would actually describe themselves, not a comma-separated list of facts. Lead with their profession, then weave in their most notable credentials (education, experience, standout achievements) as a real, grammatically complete sentence — not keywords separated by commas, and never a dangling phrase that trails off without finishing its thought.
+// Asking the same model the same fact-constrained question tends to converge on one "best"
+// phrasing regardless of sampling randomness (Anthropic's default temperature is already
+// at its max) — so genuine variety between regenerations has to come from actually giving
+// it a different angle to write from each time, not from hoping randomness helps.
+//
+// Founder preference: lead with current role/focus, education trailing, reads more like how
+// a person would actually describe themselves rather than a credentials list — so this is
+// tried FIRST on every generation (see the attempt loop below); the rest are only reached as
+// a fallback if that one happens to fail verification, keeping regenerate from being a frozen
+// duplicate without abandoning the preferred shape.
+const PREFERRED_STYLE_ANGLE =
+  'Lead with what they currently do or focus on day-to-day, then fold in their background as a trailing clause.';
 
-Years of experience specifically: never abbreviate as "Xy experience" or "Xyrs" — that reads as a typo, not a headline. Prefer folding it in as a leading modifier ("8-year foodtech investor...") over a trailing clause; if you do use a trailing clause, write it out properly ("...with 8 years of experience").
+const STYLE_ANGLES = [
+  PREFERRED_STYLE_ANGLE,
+  'Lead with years of experience as the opening modifier (e.g. "8-year foodtech investor...").',
+  'Lead with their role and industry together as the opening phrase, saving credentials (school, prior employer) for the back half of the sentence.',
+  'Lead with their single most impressive credential (top school or a notable prior employer), then their role.',
+  'Structure it as two short clauses joined by "and" or a comma — role and experience first, then credentials second.',
+];
 
-Style example (facts and output are both illustrative, not the real person):
-Facts: Role: founder | Industry: climate | Education: MIT (PhD)'19 | Years of experience: 6
-Good (flows, grammatically complete): "6-year climate founder building at the frontier, MIT PhD"
+function buildPrompt(facts: string, bio: string | null, styleAngle: string): string {
+  return `Based on this person's profile information, write a compelling one-line professional headline for a networking app — the way a sharp person would actually describe themselves, not a comma-separated list of facts. Weave their profession and most notable credentials (education, experience, standout achievements) into a real, grammatically complete sentence — not keywords separated by commas, and never a dangling phrase that trails off without finishing its thought.
+
+For this specific version, use this structure: ${styleAngle}
+
+Years of experience specifically: never abbreviate as "Xy experience" or "Xyrs" — that reads as a typo, not a headline. Whether you lead with it or use a trailing clause, write it out properly ("8-year..." or "...with 8 years of experience").
+
+What to avoid (regardless of which structure you're using above):
 Bad (list of keywords, not a sentence): "Climate founder, MIT PhD grad, 6y experience"
 Bad (dangling, doesn't finish the thought): "Climate founder building in the space, 6 years in, MIT PhD"
+Do not include the person's own name — it's shown elsewhere, never as part of this line.
+Do not add a region, market, or focus area (e.g. a continent or country) unless it's explicitly given below — leave it out rather than guessing.
+If you state a number (a year, a count), copy it exactly as given below — don't reformat, round, or spell it out differently.
 
 ${facts}
 ${bio ? `\nFull bio: "${bio}"` : ''}
 
-Use ONLY information given above — do not invent, infer, or embellish any company, school, title, or achievement not actually stated. Try to include every fact given above unless it genuinely doesn't fit into a natural sentence. If you include the education fact, use its exact formatting verbatim (including the parentheses and apostrophe-year), don't rephrase it. Output a single line, natural and well-written — prioritize it actually reading well over hitting an exact word count, but keep it to one line, roughly 20 words or fewer.
+Use ONLY information given above — do not invent, infer, or embellish any company, school, title, achievement, geography, or figure not actually stated. Try to include every fact given above unless it genuinely doesn't fit into a natural sentence. If you include the education fact, use its exact formatting verbatim (including the parentheses and apostrophe-year), don't rephrase it. Output a single line, natural and well-written — prioritize it actually reading well over hitting an exact word count, but keep it to one line, roughly 20 words or fewer.
 
 Respond with ONLY the headline. No quotes, no prefix, no markdown.`;
 }
@@ -192,17 +235,32 @@ Deno.serve(async (req) => {
       const facts = describeFacts(profile, formattedEducation);
       const approvedFacts = [facts, bio, assembledLine].filter((f): f is string => typeof f === 'string');
 
-      try {
-        const raw = (await askModel(buildPrompt(facts, bio), { maxTokens: 80 })).trim();
-        const wordCount = raw.split(/\s+/).filter(Boolean).length;
+      // One retry before falling back to the deterministic template: a single verification
+      // failure (the model adding a detail not in the approved facts) is common enough that
+      // always falling back on the first miss made "regenerate" feel like it wasn't doing
+      // anything — trying twice roughly squares the effective failure rate. The first attempt
+      // always uses the founder-preferred style angle; only a retry after that one fails picks
+      // a random angle from the rest.
+      const MAX_ATTEMPTS = 2;
+      for (let attempt = 0; attempt < MAX_ATTEMPTS && linePolished === null; attempt++) {
+        const styleAngle =
+          attempt === 0
+            ? PREFERRED_STYLE_ANGLE
+            : STYLE_ANGLES[Math.floor(Math.random() * STYLE_ANGLES.length)];
 
-        if (wordCount <= 22 && verifyNoInventedFacts(raw, approvedFacts)) {
-          linePolished = raw;
+        try {
+          const raw = (await askModel(buildPrompt(facts, bio, styleAngle), { maxTokens: 80 })).trim();
+          const wordCount = raw.split(/\s+/).filter(Boolean).length;
+
+          if (wordCount <= 22 && verifyNoInventedFacts(raw, approvedFacts)) {
+            linePolished = raw;
+          }
+          // Otherwise: try again (if attempts remain), then silently fall back —
+          // linePolished stays null, client uses line_assembled instead, per the spec's
+          // explicit fallback rule.
+        } catch {
+          // Model call failed — try again (if attempts remain), then same silent fallback.
         }
-        // Otherwise: silently fall back — linePolished stays null, client uses
-        // line_assembled instead, per the spec's explicit fallback rule.
-      } catch {
-        // Model call failed — same silent fallback.
       }
     }
 

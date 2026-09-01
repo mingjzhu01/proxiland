@@ -49,7 +49,16 @@ export default function Requests() {
       await revealRequest(id);
       setIncomingReveals((list) => list.filter((r) => r.id !== id));
     } catch (error: any) {
-      Alert.alert('Could not share your profile', error.message ?? String(error));
+      // A stale item (loaded under a different session, or already resolved/expired
+      // elsewhere) fails here rather than silently succeeding — RLS/the RPC's own auth check
+      // already guarantee that. Refresh so it drops off screen instead of sitting there stuck.
+      const message: string = error.message ?? String(error);
+      const isStale = message.includes('Not authorized') || message.includes('no longer pending');
+      Alert.alert(
+        'Could not share your profile',
+        isStale ? 'This request is no longer available.' : message
+      );
+      if (isStale) load();
     }
   }
 

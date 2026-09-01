@@ -77,15 +77,35 @@ export async function unblockUser(targetId: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function reportUser(targetId: string, reason: string): Promise<void> {
+export type ReportReason = 'impersonation' | 'harassment' | 'inappropriate_content' | 'spam' | 'other';
+export type ReportContext = 'profile' | 'chat';
+
+// targetId is the reported person's real user_id even when the reporter only ever saw an
+// anonymous card — the caller (AnonCard) has that id internally regardless of what's shown.
+export async function reportUser(
+  targetId: string,
+  context: ReportContext,
+  reason: ReportReason,
+  details?: string
+): Promise<void> {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) throw new Error('Not signed in');
 
-  const { error } = await supabase.from('reports').insert({
-    reporter_id: userData.user.id,
-    target_id: targetId,
-    reason,
-  });
+  const { data, error } = await supabase
+    .from('reports')
+    .insert({
+      reporter_id: userData.user.id,
+      target_id: targetId,
+      context,
+      reason,
+      details: details?.trim() || null,
+    })
+    .select('id')
+    .single();
 
   if (error) throw error;
+
+  // Best-effort — the report itself is already saved regardless of whether the notification
+  // email goes out.
+  supabase.functions.invoke('notify-report', { body: { reportId: data.id } }).catch(() => {});
 }

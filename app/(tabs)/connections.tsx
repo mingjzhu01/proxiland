@@ -4,17 +4,21 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ProfileCard } from '../../components/ProfileCard';
 import { getMyConnections } from '../../lib/api/connections';
+import { getUnreadCountsByConnection } from '../../lib/api/messages';
 import type { Connection } from '../../lib/types';
 
 export default function Connections() {
   const router = useRouter();
   const [connections, setConnections] = useState<Connection[]>([]);
+  const [unreadByConnection, setUnreadByConnection] = useState<Map<string, number>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
-      setConnections(await getMyConnections());
+      const [conns, unread] = await Promise.all([getMyConnections(), getUnreadCountsByConnection()]);
+      setConnections(conns);
+      setUnreadByConnection(unread);
     } catch (error: any) {
       Alert.alert('Could not load connections', error.message);
     } finally {
@@ -37,8 +41,10 @@ export default function Connections() {
         ListEmptyComponent={
           !isLoading ? <Text style={styles.empty}>No connections yet.</Text> : null
         }
-        renderItem={({ item }) =>
-          item.other ? (
+        renderItem={({ item }) => {
+          if (!item.other) return null;
+          const unreadCount = unreadByConnection.get(item.id) ?? 0;
+          return (
             <View style={styles.row}>
               <View style={styles.cardWrap}>
                 <ProfileCard
@@ -56,10 +62,15 @@ export default function Connections() {
               </View>
               <Pressable style={styles.chatButton} onPress={() => router.push(`/chat/${item.id}`)}>
                 <Ionicons name="chatbubble-outline" size={20} color="#111" />
+                {unreadCount > 0 ? (
+                  <View style={styles.unreadDot}>
+                    <Text style={styles.unreadDotText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                  </View>
+                ) : null}
               </Pressable>
             </View>
-          ) : null
-        }
+          );
+        }}
       />
     </View>
   );
@@ -71,4 +82,17 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: '#eee' },
   cardWrap: { flex: 1 },
   chatButton: { paddingHorizontal: 16 },
+  unreadDot: {
+    position: 'absolute',
+    top: -2,
+    right: 10,
+    backgroundColor: '#cc3333',
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unreadDotText: { color: '#fff', fontSize: 10, fontWeight: '700' },
 });

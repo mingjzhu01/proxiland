@@ -145,6 +145,10 @@ export default function MyProfile() {
       <Pressable style={styles.signOutButton} onPress={handleSignOut}>
         <Text style={styles.signOutText}>Sign out</Text>
       </Pressable>
+
+      <Pressable style={styles.deleteAccountButton} onPress={() => router.push('/delete-account')}>
+        <Text style={styles.deleteAccountText}>Delete account</Text>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -210,4 +214,6 @@ const styles = StyleSheet.create({
   blockedLinkText: { color: '#666', fontSize: 14 },
   signOutButton: { alignItems: 'center', marginTop: 12 },
   signOutText: { color: '#cc3333', fontSize: 14 },
+  deleteAccountButton: { alignItems: 'center', marginTop: 24, paddingVertical: 10 },
+  deleteAccountText: { color: '#cc3333', fontSize: 14, fontWeight: '700' },
 });

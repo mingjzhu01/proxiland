@@ -1,6 +1,6 @@
 import { supabase } from '../supabase';
 
-export type Overlap = { overlap_type: string; phrase: string } | null;
+export type Overlap = { overlap_type: string; phrase: string; strength: number } | null;
 
 export async function fetchOverlap(otherUserId: string): Promise<Overlap> {
   const { data, error } = await supabase.functions.invoke('phrase-overlap', {
@@ -16,6 +16,11 @@ export async function createRevealRequest(targetId: string, connectionLine: stri
     p_connection_line: connectionLine,
   });
   if (error) throw error;
+
+  // Best-effort — a failed push should never surface as a failure to send the request itself.
+  supabase.functions
+    .invoke('send-push', { body: { targetUserId: targetId, kind: 'reveal_request' } })
+    .catch(() => {});
 }
 
 export async function getOutgoingPendingTargetIds(): Promise<Set<string>> {
@@ -41,13 +46,29 @@ export type IncomingRevealRequest = {
     full_name: string;
     headline: string | null;
     photo_url: string | null;
+    employer: string | null;
+    title: string | null;
+    undergrad_school: string | null;
+    undergrad_year: string | null;
+    grad_school: string | null;
+    grad_year: string | null;
   } | null;
 };
 
 export async function getIncomingRevealRequests(): Promise<IncomingRevealRequest[]> {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return [];
+
+  // RLS on reveal_requests permits two legitimate reads that both satisfy `state = 'pending'`:
+  // the target reading requests addressed to them, AND the requester reading their own still-
+  // pending outgoing request (so they can track it — see getOutgoingPendingTargetIds). Without
+  // this explicit target_id filter, a signed-in user's own outgoing pending request leaks into
+  // this "incoming" list, mislabeled with their own name as if they were the requester asking
+  // themselves to connect.
   const { data: requests, error } = await supabase
     .from('reveal_requests')
     .select('id, requester_id, connection_line, created_at')
+    .eq('target_id', userData.user.id)
     .eq('state', 'pending')
     .order('created_at', { ascending: false });
 
@@ -60,7 +81,9 @@ export async function getIncomingRevealRequests(): Promise<IncomingRevealRequest
   const requesterIds = requests.map((r) => r.requester_id as string);
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, full_name, headline, photo_url')
+    .select(
+      'id, full_name, headline, photo_url, employer, title, undergrad_school, undergrad_year, grad_school, grad_year'
+    )
     .in('id', requesterIds);
 
   if (profilesError) throw profilesError;

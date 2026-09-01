@@ -91,3 +91,18 @@ export async function saveEditedLine(line: string): Promise<void> {
 
   if (error) throw error;
 }
+
+// Explicitly asking the AI to regenerate is the opposite of a hand-edit — clear
+// user_edited so future normal saves go back to auto-regenerating too, rather than the
+// person getting permanently stuck on manual "Regenerate" taps from here on.
+export async function clearUserEdited(): Promise<void> {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) throw new Error('Not signed in');
+
+  const { error } = await supabase
+    .from('profile_attributes')
+    .update({ user_edited: false })
+    .eq('user_id', userData.user.id);
+
+  if (error) throw error;
+}

@@ -30,9 +30,23 @@ function tokenize(text: string): string[] {
   return text.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 0);
 }
 
+// Same fix as polish-line's verifyNoInventedFacts (see that file for the full rationale):
+// only scrutinize tokens that could actually smuggle in a fabricated fact — a capitalized
+// proper noun or a standalone number — against the approved word set. Ordinary lowercase
+// prose is exempt, since it can't invent a company/school/credential by itself. The previous
+// exact-word-match version rejected almost every real paraphrase, silently falling back to
+// showing the identical one-liner instead of an actual expanded bio.
 function verifyNoInventedFacts(bio: string, approvedText: string[]): boolean {
   const approvedWords = new Set(approvedText.flatMap((t) => tokenize(t)));
-  return tokenize(bio).every((w) => approvedWords.has(w) || ALLOWED_CONNECTORS.has(w));
+  const rawWords = bio.match(/[A-Za-z0-9]+/g) ?? [];
+
+  return rawWords.every((word, i) => {
+    const lower = word.toLowerCase();
+    if (approvedWords.has(lower) || ALLOWED_CONNECTORS.has(lower)) return true;
+    const isNumber = /^\d+$/.test(word);
+    const isProperNoun = i > 0 && /^[A-Z]/.test(word);
+    return !isNumber && !isProperNoun;
+  });
 }
 
 async function sha256(text: string): Promise<string> {

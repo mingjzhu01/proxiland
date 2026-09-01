@@ -2,7 +2,7 @@
 // signed-in user has no profile_attributes row yet, per lib/auth.tsx's hasProfile check)
 // and for later edits (Profile tab's Edit button). Ends with a confirmation step showing
 // the AI-assembled line, editable, before landing back on the locked Profile tab view.
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -14,21 +14,27 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
 import { getMyProfile, upsertMyProfile, uploadProfilePhoto } from '../lib/api/profile';
+import { draftBio, type DraftBioFields, type DraftBioResult } from '../lib/api/draftBio';
 import {
   getMyProfileAttributes,
   parseProfile,
   polishLine,
   updateQuickFields,
   saveEditedLine,
+  clearUserEdited,
 } from '../lib/api/onboarding';
 import { useAuth } from '../lib/auth';
 import { LinkedInVerifyButton } from '../components/LinkedInVerifyButton';
 import type { GradDegreeType, Profile } from '../lib/types';
+import SCHOOL_NAMES from '../lib/schoolNames.json';
 import {
   ROLE_CATEGORIES,
   SENIORITY_BANDS,
@@ -71,8 +77,11 @@ export default function EditProfile() {
 
   const [roleCategory, setRoleCategory] = useState<RoleCategory | null>(null);
   const [roleOther, setRoleOther] = useState(false);
+  const [roleOtherText, setRoleOtherText] = useState('');
   const [industry, setIndustry] = useState<Industry | null>(null);
   const [industryOther, setIndustryOther] = useState(false);
+  const [industryPickerVisible, setIndustryPickerVisible] = useState(false);
+  const [industrySearch, setIndustrySearch] = useState('');
   const [seniorityBand, setSeniorityBand] = useState<SeniorityBand | null>(null);
   const [lookingFor, setLookingFor] = useState('');
   const [canOffer, setCanOffer] = useState('');
@@ -81,7 +90,12 @@ export default function EditProfile() {
   const [originalLine, setOriginalLine] = useState('');
   const [editedLine, setEditedLine] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
   const [existingUserEdited, setExistingUserEdited] = useState(false);
+
+  const [draftStatus, setDraftStatus] = useState<'idle' | 'loading' | 'found' | 'fallback' | 'error'>('idle');
+  const [draftResult, setDraftResult] = useState<DraftBioResult | null>(null);
+  const [bioCaption, setBioCaption] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const { data: userData } = await supabase.auth.getUser();
@@ -132,19 +146,116 @@ export default function EditProfile() {
     }));
   }
 
+  const canDraftBio = !!profile.full_name.trim() && !!((profile.undergrad_school ?? '').trim() || (profile.employer ?? '').trim());
+
+  function currentDraftFields(): DraftBioFields {
+    return {
+      name: profile.full_name.trim(),
+      school: (profile.undergrad_school ?? '').trim() || undefined,
+      gradYear: (profile.undergrad_year ?? '').trim() || undefined,
+      advancedDegree: profile.grad_degree_type ?? undefined,
+      employer: (profile.employer ?? '').trim() || undefined,
+      title: (profile.title ?? '').trim() || undefined,
+      role: roleOther ? roleOtherText.trim() || undefined : roleCategory ? ROLE_CATEGORY_LABELS[roleCategory] : undefined,
+      industry: industryOther ? undefined : industry ? INDUSTRY_LABELS[industry] : undefined,
+      seniority: seniorityBand ? SENIORITY_BAND_LABELS[seniorityBand] : undefined,
+    };
+  }
+
+  async function handleDraftBio(skipSearch = false) {
+    setDraftStatus('loading');
+    setDraftResult(null);
+    try {
+      const result = await draftBio(currentDraftFields(), skipSearch);
+      setDraftResult(result);
+      setDraftStatus(result.status);
+    } catch {
+      setDraftResult(null);
+      setDraftStatus('error');
+    }
+  }
+
+  function applyDraftBio(bio: string) {
+    function doApply() {
+      const backfilled: string[] = [];
+      setProfile((p) => {
+        const next = { ...p, bio };
+        // Backfill only fields the person left blank — never overwrite anything they
+        // already typed, even if the AI found something different.
+        if (draftResult?.status === 'found') {
+          if (!p.title?.trim() && draftResult.title) {
+            next.title = draftResult.title;
+            backfilled.push('Title');
+          }
+          if (!p.employer?.trim() && draftResult.employer) {
+            next.employer = draftResult.employer;
+            backfilled.push('Employer');
+          }
+          if (!p.undergrad_school?.trim() && draftResult.undergrad_school) {
+            next.undergrad_school = draftResult.undergrad_school;
+            backfilled.push('School');
+          }
+          if (!p.grad_school?.trim() && draftResult.advanced_degree_school) {
+            next.grad_school = draftResult.advanced_degree_school;
+            backfilled.push('Advanced degree school');
+            if (!p.grad_degree_type && draftResult.advanced_degree_type) {
+              next.grad_degree_type = draftResult.advanced_degree_type as GradDegreeType;
+            }
+          }
+          if (!p.linkedin_url?.trim() && draftResult.linkedin_url) {
+            next.linkedin_url = draftResult.linkedin_url;
+            backfilled.push('LinkedIn URL');
+          }
+        }
+        return next;
+      });
+      const backfillNote = backfilled.length > 0 ? ` Also filled in: ${backfilled.join(', ')}.` : '';
+      setBioCaption(
+        draftResult?.status === 'found'
+          ? `AI drafted from public info.${backfillNote} Review and edit before saving.`
+          : 'AI drafted from your entries. Review and edit before saving.'
+      );
+      setDraftStatus('idle');
+      setDraftResult(null);
+    }
+
+    if ((profile.bio ?? '').trim()) {
+      Alert.alert('Replace your bio?', 'This will replace what you already wrote.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Replace', style: 'destructive', onPress: doApply },
+      ]);
+    } else {
+      doApply();
+    }
+  }
+
+  function discardDraft() {
+    const wasFound = draftResult?.status === 'found';
+    setDraftStatus('idle');
+    setDraftResult(null);
+    if (wasFound) {
+      // "Not me" — automatically fall back to a draft built only from entered fields.
+      handleDraftBio(true);
+    }
+  }
+
   async function handleSave() {
     if (!profile.full_name.trim()) {
       Alert.alert('Name required', 'Please enter your name.');
       return;
     }
     if (!seniorityBand || (!roleCategory && !roleOther) || (!industry && !industryOther)) {
-      Alert.alert('A few more taps', 'Pick a role, industry, and seniority (or "Other" and describe it below).');
+      Alert.alert('A few more taps', 'Pick a role, industry, and seniority (or "Other" and describe it).');
       return;
     }
-    if ((roleOther || industryOther) && !(profile.bio ?? '').trim()) {
+    if (roleOther && !roleOtherText.trim()) {
+      Alert.alert('Tell us more', 'You picked "Other" for role — type what you do in the box next to it.');
+      return;
+    }
+    if (industryOther && !(profile.bio ?? '').trim()) {
       Alert.alert(
         'Tell us more',
-        'You picked "Other" for role or industry — describe yourself in the box below so we know what to show.'
+        'You picked "Other" for industry — describe yourself in the box below so we know what to show.'
       );
       return;
     }
@@ -179,8 +290,15 @@ export default function EditProfile() {
         const attrs = await getMyProfileAttributes();
         line = attrs?.line_polished ?? attrs?.line_assembled ?? '';
       } else {
+        const rawText = [
+          roleOther && roleOtherText.trim() ? `My role: ${roleOtherText.trim()}.` : null,
+          (profile.bio ?? '').trim() || null,
+        ]
+          .filter(Boolean)
+          .join(' ');
+
         await parseProfile({
-          rawText: (profile.bio ?? '').trim(),
+          rawText,
           quickFields: {
             role_category: roleOther ? undefined : roleCategory ?? undefined,
             industry: industryOther ? undefined : industry ?? undefined,
@@ -201,6 +319,22 @@ export default function EditProfile() {
       Alert.alert('Something went wrong', error.message ?? String(error));
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleRegenerate() {
+    setIsRegenerating(true);
+    try {
+      await clearUserEdited();
+      const { line_assembled, line_polished } = await polishLine();
+      const line = line_polished ?? line_assembled;
+      setOriginalLine(line);
+      setEditedLine(line);
+      setExistingUserEdited(false);
+    } catch (error: any) {
+      Alert.alert('Could not regenerate', error.message ?? String(error));
+    } finally {
+      setIsRegenerating(false);
     }
   }
 
@@ -238,9 +372,20 @@ export default function EditProfile() {
           />
 
           <Pressable
+            style={[styles.regenerateButton, isRegenerating && styles.buttonDisabled]}
+            onPress={handleRegenerate}
+            disabled={isRegenerating || isSaving}
+          >
+            <Ionicons name="sparkles" size={15} color="#3b5bdb" />
+            <Text style={styles.regenerateButtonText}>
+              {isRegenerating ? 'Regenerating…' : 'Not quite right — regenerate'}
+            </Text>
+          </Pressable>
+
+          <Pressable
             style={[styles.button, isSaving && styles.buttonDisabled]}
             onPress={handleConfirm}
-            disabled={isSaving}
+            disabled={isSaving || isRegenerating}
           >
             <Text style={styles.buttonText}>{isSaving ? 'Saving…' : 'Looks good'}</Text>
           </Pressable>
@@ -292,31 +437,85 @@ export default function EditProfile() {
             }}
           />
         </View>
-        {roleOther ? <Text style={styles.hint}>Describe your role in the box below.</Text> : null}
+        {roleOther ? (
+          <TextInput
+            style={[styles.input, styles.otherInput]}
+            value={roleOtherText}
+            onChangeText={setRoleOtherText}
+            placeholder="What's your role?"
+            autoFocus
+          />
+        ) : null}
 
         <Text style={styles.sectionLabel}>Industry</Text>
-        <View style={styles.chipRow}>
-          {INDUSTRIES.map((option) => (
-            <Chip
-              key={option}
-              label={INDUSTRY_LABELS[option]}
-              selected={industry === option && !industryOther}
-              onPress={() => {
-                setIndustry(option);
-                setIndustryOther(false);
-              }}
-            />
-          ))}
-          <Chip
-            label="Other"
-            selected={industryOther}
-            onPress={() => {
-              setIndustryOther(true);
-              setIndustry(null);
-            }}
-          />
-        </View>
+        <Pressable
+          style={styles.dropdown}
+          onPress={() => {
+            setIndustrySearch('');
+            setIndustryPickerVisible(true);
+          }}
+        >
+          <Text style={industry || industryOther ? styles.dropdownText : styles.dropdownPlaceholder}>
+            {industryOther ? 'Other' : industry ? INDUSTRY_LABELS[industry] : 'Select industry'}
+          </Text>
+        </Pressable>
         {industryOther ? <Text style={styles.hint}>Describe your industry in the box below.</Text> : null}
+
+        <Modal visible={industryPickerVisible} animationType="slide" transparent>
+          <KeyboardAvoidingView
+            style={styles.modalOverlay}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
+            <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>Select industry</Text>
+              <TextInput
+                style={[styles.input, styles.modalSearch]}
+                value={industrySearch}
+                onChangeText={setIndustrySearch}
+                placeholder="Search industries…"
+                autoFocus
+              />
+              <FlatList
+                data={INDUSTRIES.filter((item) =>
+                  INDUSTRY_LABELS[item].toLowerCase().includes(industrySearch.trim().toLowerCase())
+                )}
+                keyExtractor={(item) => item}
+                style={styles.modalList}
+                keyboardShouldPersistTaps="handled"
+                renderItem={({ item }) => (
+                  <Pressable
+                    style={styles.modalRow}
+                    onPress={() => {
+                      setIndustry(item);
+                      setIndustryOther(false);
+                      setIndustryPickerVisible(false);
+                    }}
+                  >
+                    <Text style={[styles.modalRowText, industry === item && styles.modalRowTextSelected]}>
+                      {INDUSTRY_LABELS[item]}
+                    </Text>
+                  </Pressable>
+                )}
+                ListEmptyComponent={<Text style={styles.modalEmpty}>No matches — try "Other" below.</Text>}
+                ListFooterComponent={
+                  <Pressable
+                    style={styles.modalRow}
+                    onPress={() => {
+                      setIndustry(null);
+                      setIndustryOther(true);
+                      setIndustryPickerVisible(false);
+                    }}
+                  >
+                    <Text style={[styles.modalRowText, industryOther && styles.modalRowTextSelected]}>Other</Text>
+                  </Pressable>
+                }
+              />
+              <Pressable style={styles.modalCancel} onPress={() => setIndustryPickerVisible(false)}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </Pressable>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
 
         <Text style={styles.sectionLabel}>Seniority</Text>
         <View style={styles.chipRow}>
@@ -332,7 +531,7 @@ export default function EditProfile() {
 
         <Text style={styles.sectionLabel}>Undergrad</Text>
         <View style={styles.row}>
-          <Field
+          <SchoolField
             label="School"
             value={profile.undergrad_school ?? ''}
             onChangeText={(v) => setProfile((p) => ({ ...p, undergrad_school: v }))}
@@ -360,7 +559,7 @@ export default function EditProfile() {
         </View>
         {profile.grad_degree_type ? (
           <View style={styles.row}>
-            <Field
+            <SchoolField
               label="School"
               value={profile.grad_school ?? ''}
               onChangeText={(v) => setProfile((p) => ({ ...p, grad_school: v }))}
@@ -376,22 +575,74 @@ export default function EditProfile() {
           </View>
         ) : null}
 
-        <Text style={styles.sectionLabel}>Employer &amp; title</Text>
+        <Text style={styles.sectionLabel}>Employer &amp; Title</Text>
         <Field label="Employer" value={profile.employer ?? ''} onChangeText={(v) => setProfile((p) => ({ ...p, employer: v }))} />
         <Field label="Title" value={profile.title ?? ''} onChangeText={(v) => setProfile((p) => ({ ...p, title: v }))} />
-        <Field label="Headline" value={profile.headline ?? ''} onChangeText={(v) => setProfile((p) => ({ ...p, headline: v }))} />
 
         <Text style={styles.sectionLabel}>About you</Text>
         <Text style={styles.hint}>
           Type, paste your resume, or tap the mic on your keyboard to dictate. This is also what
           the AI reads to figure out your details if you picked "Other" above.
         </Text>
+
+        <Pressable
+          style={[styles.draftButton, (!canDraftBio || draftStatus === 'loading') && styles.draftButtonDisabled]}
+          onPress={() => handleDraftBio(false)}
+          disabled={!canDraftBio || draftStatus === 'loading'}
+        >
+          <Ionicons name="sparkles" size={15} color={canDraftBio ? '#3b5bdb' : '#999'} />
+          <Text style={[styles.draftButtonText, !canDraftBio && styles.draftButtonTextDisabled]}>
+            {draftStatus === 'loading' ? 'Searching…' : 'Draft with AI'}
+          </Text>
+        </Pressable>
+        {!canDraftBio ? (
+          <Text style={styles.hint}>Add your name plus school or employer and AI can draft this for you.</Text>
+        ) : null}
+
+        {draftStatus === 'found' && draftResult?.status === 'found' ? (
+          <View style={styles.draftCard}>
+            <Text style={styles.draftCardLabel}>Found: {draftResult.matched_identity}</Text>
+            <Text style={styles.draftCardBio}>{draftResult.bio}</Text>
+            <View style={styles.draftCardActions}>
+              <Pressable style={styles.draftCardButtonPrimary} onPress={() => applyDraftBio(draftResult.bio)}>
+                <Text style={styles.draftCardButtonPrimaryText}>Use this draft</Text>
+              </Pressable>
+              <Pressable style={styles.draftCardButtonSecondary} onPress={discardDraft}>
+                <Text style={styles.draftCardButtonSecondaryText}>Not me / discard</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
+
+        {draftStatus === 'fallback' && draftResult?.status === 'fallback' ? (
+          <View style={styles.draftCard}>
+            <Text style={styles.draftCardLabel}>Drafted from your profile details</Text>
+            <Text style={styles.draftCardBio}>{draftResult.bio}</Text>
+            <View style={styles.draftCardActions}>
+              <Pressable style={styles.draftCardButtonPrimary} onPress={() => applyDraftBio(draftResult.bio)}>
+                <Text style={styles.draftCardButtonPrimaryText}>Use this draft</Text>
+              </Pressable>
+              <Pressable style={styles.draftCardButtonSecondary} onPress={discardDraft}>
+                <Text style={styles.draftCardButtonSecondaryText}>Discard</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
+
+        {draftStatus === 'error' ? (
+          <Text style={styles.draftError}>Couldn't draft a bio right now. Type or dictate a few lines instead.</Text>
+        ) : null}
+
         <Field
           label="Bio"
           value={profile.bio ?? ''}
-          onChangeText={(v) => setProfile((p) => ({ ...p, bio: v }))}
+          onChangeText={(v) => {
+            setProfile((p) => ({ ...p, bio: v }));
+            setBioCaption(null);
+          }}
           multiline
         />
+        {bioCaption ? <Text style={styles.bioCaption}>{bioCaption}</Text> : null}
 
         <Field
           label="What are you looking for? (optional)"
@@ -462,6 +713,69 @@ function Field({
   );
 }
 
+// Type-ahead over a bundled ~10k-university dataset (lib/schoolNames.json). Never blocks
+// free typing — tapping a suggestion just fills the field faster, but any text the user
+// types (including schools not in the list) is kept as-is.
+function SchoolField({
+  label,
+  value,
+  onChangeText,
+  containerStyle,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (v: string) => void;
+  containerStyle?: object;
+}) {
+  const [focused, setFocused] = useState(false);
+
+  const suggestions = useMemo(() => {
+    const q = value.trim().toLowerCase();
+    if (q.length < 2) return [];
+    const startsWith: string[] = [];
+    const contains: string[] = [];
+    for (const name of SCHOOL_NAMES as string[]) {
+      const lower = name.toLowerCase();
+      if (lower.startsWith(q)) {
+        if (startsWith.length < 8) startsWith.push(name);
+      } else if (lower.includes(q)) {
+        if (contains.length < 8) contains.push(name);
+      }
+      if (startsWith.length >= 8 && contains.length >= 8) break;
+    }
+    return [...startsWith, ...contains].slice(0, 8);
+  }, [value]);
+
+  return (
+    <View style={[styles.field, containerStyle]}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <TextInput
+        style={styles.input}
+        value={value}
+        onChangeText={onChangeText}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setTimeout(() => setFocused(false), 150)}
+      />
+      {focused && suggestions.length > 0 ? (
+        <View style={styles.suggestionsBox}>
+          {suggestions.map((name) => (
+            <Pressable
+              key={name}
+              style={styles.suggestionRow}
+              onPress={() => {
+                onChangeText(name);
+                setFocused(false);
+              }}
+            >
+              <Text style={styles.suggestionText}>{name}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
   return (
     <Pressable style={[styles.chip, selected && styles.chipSelected]} onPress={onPress}>
@@ -480,6 +794,16 @@ const styles = StyleSheet.create({
   avatarPlaceholder: { backgroundColor: '#eee', justifyContent: 'center', alignItems: 'center' },
   avatarPlaceholderText: { color: '#888', fontSize: 12 },
   field: { marginBottom: 14 },
+  suggestionsBox: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    marginTop: 4,
+    backgroundColor: '#fff',
+    overflow: 'hidden',
+  },
+  suggestionRow: { paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: 1, borderColor: '#f0f0f0' },
+  suggestionText: { fontSize: 14, color: '#111' },
   fieldLabel: { fontSize: 13, color: '#666', marginBottom: 4 },
   input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 15 },
   inputMultiline: { minHeight: 80, textAlignVertical: 'top' },
@@ -499,6 +823,84 @@ const styles = StyleSheet.create({
   chipSelected: { backgroundColor: '#111', borderColor: '#111' },
   chipText: { fontSize: 13, fontWeight: '600', color: '#555' },
   chipTextSelected: { color: '#fff' },
+  otherInput: { marginBottom: 8 },
+  dropdown: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 4,
+  },
+  dropdownText: { fontSize: 15, color: '#111' },
+  dropdownPlaceholder: { fontSize: 15, color: '#999' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  modalCard: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    maxHeight: '70%',
+  },
+  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 12 },
+  modalSearch: { marginBottom: 10 },
+  modalEmpty: { textAlign: 'center', color: '#999', paddingVertical: 20 },
+  modalList: { flexGrow: 0 },
+  modalRow: { paddingVertical: 14, borderBottomWidth: 1, borderColor: '#f0f0f0' },
+  modalRowText: { fontSize: 16, color: '#111' },
+  modalRowTextSelected: { fontWeight: '700' },
+  modalCancel: { alignItems: 'center', paddingVertical: 16 },
+  modalCancelText: { fontSize: 15, color: '#666' },
+  draftButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#3b5bdb',
+    borderRadius: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    marginBottom: 8,
+  },
+  draftButtonDisabled: { borderColor: '#ddd' },
+  draftButtonText: { fontSize: 13, fontWeight: '600', color: '#3b5bdb' },
+  draftButtonTextDisabled: { color: '#999' },
+  regenerateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#3b5bdb',
+    borderRadius: 8,
+    paddingVertical: 12,
+    marginTop: 16,
+  },
+  regenerateButtonText: { fontSize: 14, fontWeight: '600', color: '#3b5bdb' },
+  draftCard: {
+    backgroundColor: '#eef1fd',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#dbe2fb',
+    padding: 14,
+    marginBottom: 12,
+  },
+  draftCardLabel: { fontSize: 12, fontWeight: '700', color: '#3b5bdb', marginBottom: 6 },
+  draftCardBio: { fontSize: 14, color: '#222', lineHeight: 20, marginBottom: 12 },
+  draftCardActions: { flexDirection: 'row', gap: 10 },
+  draftCardButtonPrimary: { backgroundColor: '#111', borderRadius: 20, paddingVertical: 9, paddingHorizontal: 16 },
+  draftCardButtonPrimaryText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  draftCardButtonSecondary: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 20,
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+  },
+  draftCardButtonSecondaryText: { color: '#555', fontSize: 13, fontWeight: '600' },
+  draftError: { fontSize: 12, color: '#a05a2c', marginBottom: 8 },
+  bioCaption: { fontSize: 12, color: '#888', marginTop: -10, marginBottom: 14 },
   button: { backgroundColor: '#111', borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 24 },
   buttonDisabled: { opacity: 0.5 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },

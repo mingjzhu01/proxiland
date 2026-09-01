@@ -43,3 +43,6 @@ yarn-error.*
 
 # Supabase CLI local cache
 supabase/.temp/
+
+# Ming's personal working files (App Store submission notes, strategy docs) — not app source
+/Ming's folder/

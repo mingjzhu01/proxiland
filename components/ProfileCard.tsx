@@ -13,6 +13,10 @@ type Props = {
   photoUrl?: string | null;
   distanceMeters?: number;
   onPress?: () => void;
+  // Tapping the photo specifically goes to their profile instead of whatever onPress does
+  // (e.g. opening chat) — falls back to onPress when not provided, so existing callers that
+  // don't pass this keep their previous single-tap-target behavior unchanged.
+  onPhotoPress?: () => void;
 };
 
 function formatDistance(meters: number): string {
@@ -32,6 +36,7 @@ export function ProfileCard({
   photoUrl,
   distanceMeters,
   onPress,
+  onPhotoPress,
 }: Props) {
   const subtitle = [title, employer]
     .map((s) => s?.trim())
@@ -46,15 +51,17 @@ export function ProfileCard({
   });
 
   return (
-    <Pressable style={styles.card} onPress={onPress}>
-      {photoUrl ? (
-        <Image source={{ uri: photoUrl }} style={styles.avatar} />
-      ) : (
-        <View style={[styles.avatar, styles.avatarPlaceholder]}>
-          <Text style={styles.avatarInitial}>{name.charAt(0).toUpperCase()}</Text>
-        </View>
-      )}
-      <View style={styles.info}>
+    <View style={styles.card}>
+      <Pressable onPress={onPhotoPress ?? onPress}>
+        {photoUrl ? (
+          <Image source={{ uri: photoUrl }} style={styles.avatar} />
+        ) : (
+          <View style={[styles.avatar, styles.avatarPlaceholder]}>
+            <Text style={styles.avatarInitial}>{name.charAt(0).toUpperCase()}</Text>
+          </View>
+        )}
+      </Pressable>
+      <Pressable style={styles.info} onPress={onPress}>
         <Text style={styles.name}>{name}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
         {headline ? <Text style={styles.headline}>{'• '}{headline}</Text> : null}
@@ -62,8 +69,8 @@ export function ProfileCard({
         {distanceMeters !== undefined ? (
           <Text style={styles.distance}>{formatDistance(distanceMeters)}</Text>
         ) : null}
-      </View>
-    </Pressable>
+      </Pressable>
+    </View>
   );
 }
 

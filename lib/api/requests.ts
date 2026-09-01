@@ -23,6 +23,13 @@ export async function sendRequest(
   if (error) throw error;
 
   logSessionEvent('connect_request', { metadata: { type } });
+
+  // Best-effort — a failed push should never surface as a failure to send the request itself.
+  supabase.functions
+    .invoke('send-push', {
+      body: { targetUserId: receiverId, kind: type === 'coffee' ? 'coffee_request' : 'connect_request' },
+    })
+    .catch(() => {});
 }
 
 export async function respondToRequest(

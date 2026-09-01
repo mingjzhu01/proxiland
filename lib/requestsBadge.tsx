@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { getIncomingRequests } from './api/requests';
+import { getIncomingRevealRequests } from './api/reveal';
 import { useAuth } from './auth';
 
 type RequestsBadgeContextValue = {
@@ -24,8 +25,15 @@ export function RequestsBadgeProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
-      const incoming = await getIncomingRequests();
-      setPendingCount(incoming.length);
+      // Two separate request systems feed the same badge: connection_requests (requests to an
+      // already-visible profile, e.g. coffee) and reveal_requests (the anonymous "Ask to
+      // connect" from the Nearby feed) — both need to count, or asking to connect from Nearby
+      // silently never shows up as a notification.
+      const [incoming, incomingReveals] = await Promise.all([
+        getIncomingRequests(),
+        getIncomingRevealRequests(),
+      ]);
+      setPendingCount(incoming.length + incomingReveals.length);
     } catch {
       // transient error — next poll will retry
     }
