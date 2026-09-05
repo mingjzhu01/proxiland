@@ -78,6 +78,11 @@ function RootNavigation() {
         />
         <Stack.Screen name="chat/[connectionId]" options={{ headerShown: true, title: 'Chat' }} />
         <Stack.Screen name="delete-account" options={{ headerShown: true, title: 'Delete Account' }} />
+        <Stack.Screen name="event-join/[token]" options={{ headerShown: true, title: 'Event' }} />
+        <Stack.Screen name="scan-event" options={{ headerShown: true, title: 'Scan QR Code' }} />
+        <Stack.Screen name="event/[id]/index" options={{ headerShown: true, title: 'Event' }} />
+        <Stack.Screen name="event/[id]/intent" options={{ headerShown: true, title: 'Your Intent' }} />
+        <Stack.Screen name="event/[id]/attendees" options={{ headerShown: true, title: 'All Attendees' }} />
       </Stack>
       {showBrandedSplash ? <BrandedSplash /> : null}
     </>

@@ -15,7 +15,19 @@ export const INTENT_STATE_LABELS: Record<IntentState, string> = {
 };
 
 export async function logSessionEvent(
-  eventType: 'session_open' | 'card_expand' | 'connect_request' | 'connect_accept',
+  eventType:
+    | 'session_open'
+    | 'card_expand'
+    | 'connect_request'
+    | 'connect_accept'
+    | 'event_intent_prompt_viewed'
+    | 'event_intent_option_selected'
+    | 'event_intent_option_removed'
+    | 'event_intent_custom_text_added'
+    | 'event_intent_completed'
+    | 'event_intent_edited'
+    | 'event_intent_update_saved'
+    | 'event_matches_regenerated',
   options?: { scopeId?: string; metadata?: Record<string, unknown> }
 ): Promise<void> {
   // Best-effort — instrumentation should never block or surface errors to the user.

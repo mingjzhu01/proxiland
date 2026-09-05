@@ -45,6 +45,8 @@ export type ConnectionRequest = {
   status: RequestStatus;
   meeting_location: string | null;
   meeting_at: string | null;
+  context_type: 'nearby' | 'event';
+  event_id: string | null;
   created_at: string;
   sender?: Profile;
   receiver?: Profile;

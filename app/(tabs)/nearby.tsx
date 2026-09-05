@@ -6,18 +6,26 @@
 import { useCallback, useState } from 'react';
 import { View, FlatList, Text, Pressable, StyleSheet, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { AnonCard } from '../../components/AnonCard';
 import { ProfileCard } from '../../components/ProfileCard';
 import { VisibilityToggle } from '../../components/VisibilityToggle';
 import { getMyActiveVisibility } from '../../lib/api/visibility';
 import { getMyConnections } from '../../lib/api/connections';
+import { getCurrentCoords } from '../../lib/location';
 import {
   getOrCreateGeoScope,
   getAggregateView,
-  getFeedCards,
+  getFeedCardsV2,
   type AggregateView,
-  type FeedCard,
+  type FeedCardV2,
 } from '../../lib/api/feed';
+import {
+  detectNearbyEvents,
+  getMyActiveEvents,
+  joinEvent,
+  type EventSummary,
+} from '../../lib/api/events';
 import {
   fetchOverlap,
   createRevealRequest,
@@ -27,6 +35,7 @@ import {
   type IncomingRevealRequest,
   type Overlap,
 } from '../../lib/api/reveal';
+import { sendRequest, getOutgoingPendingConnectTargetIds } from '../../lib/api/requests';
 import { useAuth } from '../../lib/auth';
 import type { Connection } from '../../lib/types';
 
@@ -35,9 +44,10 @@ export default function Nearby() {
   const { hasProfile, isDemo } = useAuth();
   const [isVisible, setIsVisible] = useState(false);
   const [aggregate, setAggregate] = useState<AggregateView | null>(null);
-  const [cards, setCards] = useState<FeedCard[]>([]);
+  const [cards, setCards] = useState<FeedCardV2[]>([]);
   const [connectionByUserId, setConnectionByUserId] = useState<Map<string, Connection>>(new Map());
   const [askedTargetIds, setAskedTargetIds] = useState<Set<string>>(new Set());
+  const [connectRequestedIds, setConnectRequestedIds] = useState<Set<string>>(new Set());
   const [incomingRevealByRequesterId, setIncomingRevealByRequesterId] = useState<
     Map<string, IncomingRevealRequest>
   >(new Map());
@@ -45,6 +55,9 @@ export default function Nearby() {
   const [isLoading, setIsLoading] = useState(false);
   const [scopeId, setScopeId] = useState<string | null>(null);
   const [isRevealingBack, setIsRevealingBack] = useState<string | null>(null);
+  const [nearbyEvents, setNearbyEvents] = useState<EventSummary[]>([]);
+  const [myActiveEvents, setMyActiveEvents] = useState<EventSummary[]>([]);
+  const [isJoiningEventId, setIsJoiningEventId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -63,24 +76,39 @@ export default function Nearby() {
       setConnectionByUserId(connectionMap);
       setIncomingRevealByRequesterId(incomingRevealMap);
 
+      // Doesn't need location, so this loads regardless of visibility — someone who joined an
+      // event by QR should still see it here even with visibility off.
+      getMyActiveEvents()
+        .then(setMyActiveEvents)
+        .catch(() => {});
+
       if (!activeVisibility) {
         setAggregate(null);
         setCards([]);
         setScopeId(null);
+        setNearbyEvents([]);
         return;
       }
 
       const id = await getOrCreateGeoScope();
       setScopeId(id);
 
-      const [aggregateView, feedCards, askedIds] = await Promise.all([
+      // Best-effort — a failed event lookup shouldn't block the regular Nearby feed.
+      getCurrentCoords()
+        .then(({ lat, lng }) => detectNearbyEvents(lat, lng))
+        .then(setNearbyEvents)
+        .catch(() => setNearbyEvents([]));
+
+      const [aggregateView, feedCards, askedIds, connectRequestedIds] = await Promise.all([
         getAggregateView(id),
-        getFeedCards(id),
+        getFeedCardsV2(id),
         getOutgoingPendingTargetIds(),
+        getOutgoingPendingConnectTargetIds(),
       ]);
 
       setAggregate(aggregateView);
       setAskedTargetIds(askedIds);
+      setConnectRequestedIds(connectRequestedIds);
 
       // Only rank/show "why you two" for people who'll actually render as an anonymous
       // stranger card — someone already connected or already mid-reveal shows their real
@@ -142,6 +170,33 @@ export default function Nearby() {
     }
   }
 
+  async function handleConnect(targetUserId: string) {
+    setConnectRequestedIds((prev) => new Set(prev).add(targetUserId));
+    try {
+      await sendRequest(targetUserId, 'connect', { contextType: 'nearby' });
+    } catch (error: any) {
+      setConnectRequestedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(targetUserId);
+        return next;
+      });
+      Alert.alert('Could not send request', error.message ?? String(error));
+    }
+  }
+
+  async function handleJoinEvent(event: EventSummary) {
+    setIsJoiningEventId(event.id);
+    try {
+      await joinEvent(event.id, 'geofence_prompt');
+      router.push(`/event/${event.id}`);
+      await load();
+    } catch (error: any) {
+      Alert.alert('Could not join event', error.message ?? String(error));
+    } finally {
+      setIsJoiningEventId(null);
+    }
+  }
+
   function handleLockedTap() {
     Alert.alert(
       'Finish your profile first',
@@ -157,6 +212,8 @@ export default function Nearby() {
   // Treat "still checking" the same as "not done" — avoids a flash of enabled buttons
   // before the app knows for sure.
   const profileIncomplete = hasProfile !== true;
+  const joinedEventIds = new Set(myActiveEvents.map((e) => e.id));
+  const joinableNearbyEvents = nearbyEvents.filter((e) => !joinedEventIds.has(e.id));
 
   return (
     <View style={styles.container}>
@@ -170,7 +227,33 @@ export default function Nearby() {
               <Text style={styles.demoPillText}>Demo mode</Text>
             </View>
           ) : null}
+          <Pressable style={styles.scanButton} onPress={() => router.push('/scan-event')}>
+            <Ionicons name="qr-code-outline" size={20} color="#4A3B31" />
+          </Pressable>
         </View>
+        {myActiveEvents.length > 0 ? (
+          <View style={styles.eventPillRow}>
+            {myActiveEvents.map((e) => (
+              <Pressable key={e.id} style={styles.eventPill} onPress={() => router.push(`/event/${e.id}`)}>
+                <Ionicons name="people" size={13} color="#3b5bdb" />
+                <Text style={styles.eventPillText}>{e.name}</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+        {joinableNearbyEvents.map((e) => (
+          <Pressable
+            key={e.id}
+            style={styles.eventJoinBanner}
+            onPress={() => handleJoinEvent(e)}
+            disabled={isJoiningEventId === e.id}
+          >
+            <Text style={styles.eventJoinBannerTitle}>You're at {e.name}</Text>
+            <Text style={styles.eventJoinBannerAction}>
+              {isJoiningEventId === e.id ? 'Joining…' : 'Tap to join and see who else is here'}
+            </Text>
+          </Pressable>
+        ))}
         {isVisible ? (
           <View style={styles.statusRow}>
             <View style={styles.dot} />
@@ -259,9 +342,41 @@ export default function Nearby() {
             );
           }
 
+          // Full-identity opt-in (migration 0056) — this person has chosen to be shown fully
+          // rather than anonymized, so there's no card to expand and no reveal step; a plain
+          // profile card with a normal connect request is the right shape, same as an event
+          // attendee.
+          if (item.identity_visibility === 'full') {
+            const requested = connectRequestedIds.has(item.user_id);
+            return (
+              <View style={styles.connectedWrap}>
+                <ProfileCard
+                  name={item.full_name ?? 'Someone nearby'}
+                  headline={item.headline}
+                  employer={item.employer}
+                  title={item.title}
+                  undergradSchool={item.undergrad_school}
+                  undergradYear={item.undergrad_year}
+                  gradSchool={item.grad_school}
+                  gradYear={item.grad_year}
+                  photoUrl={item.photo_url}
+                  onPress={() => router.push(`/profile/${item.user_id}`)}
+                />
+                {item.overlap_phrase ? <Text style={styles.wantsToConnectHint}>{item.overlap_phrase}</Text> : null}
+                <Pressable
+                  style={[styles.connectPill, requested && styles.buttonDisabled]}
+                  onPress={() => handleConnect(item.user_id)}
+                  disabled={requested}
+                >
+                  <Text style={styles.connectPillText}>{requested ? 'Requested' : 'Connect'}</Text>
+                </Pressable>
+              </View>
+            );
+          }
+
           return (
             <AnonCard
-              card={item}
+              card={{ ...item, line: item.line ?? '', used_generic: item.used_generic ?? false }}
               overlap={overlapByUserId.get(item.user_id) ?? null}
               alreadyAsked={askedTargetIds.has(item.user_id)}
               locked={profileIncomplete}
@@ -287,6 +402,28 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   demoPillText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  scanButton: { marginLeft: 'auto', padding: 6 },
+  eventPillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  eventPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#eef0fb',
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  eventPillText: { color: '#3b5bdb', fontSize: 12, fontWeight: '600' },
+  eventJoinBanner: {
+    backgroundColor: '#eef0fb',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#c9cff0',
+  },
+  eventJoinBannerTitle: { fontSize: 14, fontWeight: '700', color: '#2a3a9c' },
+  eventJoinBannerAction: { fontSize: 12, color: '#3b5bdb', marginTop: 2 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2ecc71' },
   statusText: { fontSize: 13, color: '#666' },
@@ -318,5 +455,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   shareBackButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  connectPill: {
+    backgroundColor: '#4A3B31',
+    borderRadius: 20,
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
+  connectPillText: { color: '#fff', fontSize: 14, fontWeight: '600' },
   buttonDisabled: { opacity: 0.5 },
 });

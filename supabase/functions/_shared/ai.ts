@@ -65,6 +65,7 @@ export async function askModel(
   const data = await res.json();
   const content = data.content;
   if (!Array.isArray(content)) {
+    console.error('askModel: response.content was not an array. Full response:', JSON.stringify(data));
     throw new Error('Unexpected Anthropic response shape');
   }
 
@@ -77,6 +78,12 @@ export async function askModel(
     .join('');
 
   if (!text) {
+    console.error(
+      'askModel: no text blocks in response. stop_reason:',
+      data.stop_reason,
+      'full response:',
+      JSON.stringify(data)
+    );
     throw new Error('Unexpected Anthropic response shape');
   }
   return text;

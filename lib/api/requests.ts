@@ -5,7 +5,13 @@ import { logSessionEvent } from './instrumentation';
 export async function sendRequest(
   receiverId: string,
   type: RequestType,
-  options?: { message?: string; meetingLocation?: string; meetingAt?: Date }
+  options?: {
+    message?: string;
+    meetingLocation?: string;
+    meetingAt?: Date;
+    contextType?: 'nearby' | 'event';
+    eventId?: string;
+  }
 ): Promise<void> {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) throw new Error('Not signed in');
@@ -17,6 +23,8 @@ export async function sendRequest(
     message: options?.message ?? null,
     meeting_location: options?.meetingLocation ?? null,
     meeting_at: options?.meetingAt?.toISOString() ?? null,
+    context_type: options?.contextType ?? 'nearby',
+    event_id: options?.eventId ?? null,
     status: 'pending',
   });
 
@@ -95,6 +103,15 @@ export async function getScheduledCoffees(): Promise<ConnectionRequest[]> {
 
   if (error) throw error;
   return data ?? [];
+}
+
+export async function getOutgoingPendingConnectTargetIds(): Promise<Set<string>> {
+  const outgoing = await getOutgoingRequests();
+  return new Set(
+    outgoing
+      .filter((r) => r.type === 'connect' && r.context_type === 'nearby' && r.status === 'pending')
+      .map((r) => r.receiver_id)
+  );
 }
 
 export async function getOutgoingRequests(): Promise<ConnectionRequest[]> {

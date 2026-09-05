@@ -2,11 +2,12 @@
 // happens in app/edit-profile.tsx — this screen just displays the result, with a single
 // Edit button at the bottom.
 import { useCallback, useState } from 'react';
-import { View, Text, Image, Pressable, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, Image, Pressable, Switch, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { supabase } from '../../lib/supabase';
 import { getMyProfile } from '../../lib/api/profile';
 import { getMyProfileAttributes, type ProfileAttributes } from '../../lib/api/onboarding';
+import { getMyNearbyIdentityVisibility, setMyNearbyIdentityVisibility } from '../../lib/api/feed';
 import { formatEducation } from '../../lib/formatEducation';
 import { ROLE_CATEGORY_LABELS, SENIORITY_BAND_LABELS, INDUSTRY_LABELS } from '../../lib/allowedValues';
 import type { Profile } from '../../lib/types';
@@ -18,16 +19,38 @@ export default function MyProfile() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [emailConfirmed, setEmailConfirmed] = useState(true);
   const [isResending, setIsResending] = useState(false);
+  const [nearbyVisibility, setNearbyVisibility] = useState<'anonymous' | 'full'>('full');
+  const [isUpdatingVisibility, setIsUpdatingVisibility] = useState(false);
 
   const load = useCallback(async () => {
     const { data: userData } = await supabase.auth.getUser();
     setUserEmail(userData.user?.email ?? null);
     setEmailConfirmed(!!userData.user?.email_confirmed_at);
 
-    const [p, a] = await Promise.all([getMyProfile(), getMyProfileAttributes()]);
+    const [p, a, visibility] = await Promise.all([
+      getMyProfile(),
+      getMyProfileAttributes(),
+      getMyNearbyIdentityVisibility().catch(() => 'full' as const),
+    ]);
     setProfile(p);
     setAttrs(a);
+    setNearbyVisibility(visibility);
   }, []);
+
+  async function handleToggleVisibility(showFull: boolean) {
+    const next = showFull ? 'full' : 'anonymous';
+    const previous = nearbyVisibility;
+    setNearbyVisibility(next);
+    setIsUpdatingVisibility(true);
+    try {
+      await setMyNearbyIdentityVisibility(next);
+    } catch (error: any) {
+      setNearbyVisibility(previous);
+      Alert.alert('Could not update', error.message ?? String(error));
+    } finally {
+      setIsUpdatingVisibility(false);
+    }
+  }
 
   useFocusEffect(
     useCallback(() => {
@@ -96,12 +119,29 @@ export default function MyProfile() {
 
       <Text style={styles.name}>{profile.full_name || 'Unnamed'}</Text>
 
-      {line ? (
-        <View style={styles.anonSection}>
-          <Text style={styles.anonLabel}>How you appear</Text>
-          <Text style={styles.anonLine}>{line}</Text>
+      <View style={styles.anonSection}>
+        <View style={styles.visibilityRow}>
+          <View style={styles.visibilityTextWrap}>
+            <Text style={styles.anonLabel}>Show your full identity in Nearby</Text>
+            <Text style={styles.visibilityHint}>
+              {nearbyVisibility === 'full'
+                ? "On — people nearby see your real name and photo, same as at an event."
+                : 'Off — you appear as an anonymized card until someone asks to connect.'}
+            </Text>
+          </View>
+          <Switch
+            value={nearbyVisibility === 'full'}
+            onValueChange={handleToggleVisibility}
+            disabled={isUpdatingVisibility}
+          />
         </View>
-      ) : null}
+        {nearbyVisibility === 'anonymous' && line ? (
+          <>
+            <Text style={[styles.anonLabel, styles.anonLinePreviewLabel]}>How you appear</Text>
+            <Text style={styles.anonLine}>{line}</Text>
+          </>
+        ) : null}
+      </View>
 
       {profile.headline ? <Text style={styles.headline}>{profile.headline}</Text> : null}
 
@@ -182,7 +222,11 @@ const styles = StyleSheet.create({
     borderColor: '#eee',
   },
   anonLabel: { fontSize: 12, fontWeight: '700', color: '#888', marginBottom: 4 },
+  anonLinePreviewLabel: { marginTop: 12 },
   anonLine: { fontSize: 15, color: '#111' },
+  visibilityRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  visibilityTextWrap: { flex: 1 },
+  visibilityHint: { fontSize: 12, color: '#888', marginTop: 4, lineHeight: 16 },
   row: { marginTop: 16 },
   rowLabel: { fontSize: 12, color: '#888', marginBottom: 2 },
   rowValue: { fontSize: 15, color: '#111' },

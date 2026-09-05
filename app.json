@@ -2,7 +2,7 @@
   "expo": {
     "name": "Proxiland",
     "slug": "proxiland",
-    "version": "1.0.3",
+    "version": "1.1.0",
     "scheme": "proxiland",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -19,7 +19,7 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Proxiland uses your location, only while the app is open and only when you turn on visibility, to show you nearby professionals and let them see you.",
         "NSPhotoLibraryUsageDescription": "Proxiland needs access to your photos so you can set a profile picture.",
-        "NSCameraUsageDescription": "Proxiland needs camera access so you can take a profile picture."
+        "NSCameraUsageDescription": "Proxiland needs camera access so you can take a profile picture and scan event QR codes."
       }
     },
     "android": {
@@ -51,6 +51,14 @@
           "image": "./assets/icon.png",
           "resizeMode": "cover",
           "backgroundColor": "#4A3B31"
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Proxiland needs camera access so you can take a profile picture and scan event QR codes.",
+          "microphonePermission": "Proxiland does not use your microphone.",
+          "recordAudioAndroid": false
         }
       ]
     ],
