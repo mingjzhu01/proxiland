@@ -1,15 +1,23 @@
 // Locked, read-only view of your own profile. All editing (including first-time setup)
 // happens in app/edit-profile.tsx — this screen just displays the result, with a single
-// Edit button at the bottom.
+// Edit button at the bottom. Sign-out, blocked users, and delete account moved to
+// app/settings.tsx per the visual redesign — they don't need to compete with profile
+// content on every visit.
 import { useCallback, useState } from 'react';
-import { View, Text, Image, Pressable, Switch, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, Pressable, Switch, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { getMyProfile } from '../../lib/api/profile';
 import { getMyProfileAttributes, type ProfileAttributes } from '../../lib/api/onboarding';
 import { getMyNearbyIdentityVisibility, setMyNearbyIdentityVisibility } from '../../lib/api/feed';
 import { formatEducation } from '../../lib/formatEducation';
 import { ROLE_CATEGORY_LABELS, SENIORITY_BAND_LABELS, INDUSTRY_LABELS } from '../../lib/allowedValues';
+import { LetteredAvatar } from '../../components/LetteredAvatar';
+import { RedactedIdentity } from '../../components/RedactedIdentity';
+import { SectionLabel } from '../../components/SectionLabel';
+import { SecondaryButton } from '../../components/Buttons';
+import { colors, avatarSizes, typeStyles, spacing, radii } from '../../lib/theme';
 import type { Profile } from '../../lib/types';
 
 export default function MyProfile() {
@@ -58,10 +66,6 @@ export default function MyProfile() {
     }, [load])
   );
 
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-  }
-
   async function handleResendVerification() {
     if (!userEmail) return;
     setIsResending(true);
@@ -79,16 +83,25 @@ export default function MyProfile() {
   if (!profile) {
     return (
       <View style={styles.centered}>
-        <Text>Loading…</Text>
+        <Text style={styles.loadingText}>Loading…</Text>
       </View>
     );
   }
 
   const line = attrs?.line_polished ?? attrs?.line_assembled ?? null;
   const education = formatEducation(profile);
+  const subtitle = [profile.title, profile.employer].filter(Boolean).join(' at ');
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.topRow}>
+        <SectionLabel tone="brass">You</SectionLabel>
+        <View style={styles.spacer} />
+        <Pressable onPress={() => router.push('/settings')} hitSlop={10}>
+          <Ionicons name="settings-outline" size={20} color={colors.textSecondary} />
+        </Pressable>
+      </View>
+
       {!emailConfirmed ? (
         <View style={styles.securityBanner}>
           <Text style={styles.securityBannerTitle}>Verify your email</Text>
@@ -107,26 +120,28 @@ export default function MyProfile() {
         </View>
       ) : null}
 
-      <View style={styles.avatarWrap}>
-        {profile.photo_url ? (
-          <Image source={{ uri: profile.photo_url }} style={styles.avatar} />
-        ) : (
-          <View style={[styles.avatar, styles.avatarPlaceholder]}>
-            <Text style={styles.avatarPlaceholderText}>No photo</Text>
+      <View style={styles.identityBlock}>
+        <LetteredAvatar name={profile.full_name} photoUrl={profile.photo_url} size={avatarSizes.ownProfile} />
+        <Text style={styles.name}>{profile.full_name || 'Unnamed'}</Text>
+        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        {profile.linkedin_verified ? (
+          <View style={styles.verifiedBadge}>
+            <Ionicons name="checkmark-circle" size={13} color={colors.live} />
+            <Text style={styles.verifiedBadgeText}>LinkedIn verified</Text>
           </View>
+        ) : (
+          <Pressable style={styles.verifyChip} onPress={() => router.push('/edit-profile')}>
+            <Text style={styles.verifyChipText}>Verify with LinkedIn</Text>
+          </Pressable>
         )}
       </View>
 
-      <Text style={styles.name}>{profile.full_name || 'Unnamed'}</Text>
-
-      <View style={styles.anonSection}>
-        <View style={styles.visibilityRow}>
+      <View style={styles.visibilityCard}>
+        <View style={styles.visibilityTopRow}>
           <View style={styles.visibilityTextWrap}>
-            <Text style={styles.anonLabel}>Show your full identity in Nearby</Text>
-            <Text style={styles.visibilityHint}>
-              {nearbyVisibility === 'full'
-                ? "On — people nearby see your real name and photo, same as at an event."
-                : 'Off — you appear as an anonymized card until someone asks to connect.'}
+            <SectionLabel tone="brass" style={{ color: colors.brassOnDark }}>How you appear nearby</SectionLabel>
+            <Text style={styles.visibilityState}>
+              {nearbyVisibility === 'full' ? 'Full identity' : 'Anonymous until asked'}
             </Text>
           </View>
           <Switch
@@ -135,129 +150,126 @@ export default function MyProfile() {
             disabled={isUpdatingVisibility}
           />
         </View>
-        {nearbyVisibility === 'anonymous' && line ? (
-          <>
-            <Text style={[styles.anonLabel, styles.anonLinePreviewLabel]}>How you appear</Text>
-            <Text style={styles.anonLine}>{line}</Text>
-          </>
-        ) : null}
+        <View style={styles.visibilityDivider} />
+        <View style={styles.previewRow}>
+          {nearbyVisibility === 'anonymous' ? (
+            <>
+              <View style={styles.previewScale}>
+                <RedactedIdentity />
+              </View>
+            </>
+          ) : (
+            <>
+              <LetteredAvatar name={profile.full_name} photoUrl={profile.photo_url} size={34} />
+              <Text style={styles.previewLine}>{profile.full_name}</Text>
+            </>
+          )}
+        </View>
+        {nearbyVisibility === 'anonymous' && line ? <Text style={styles.previewLineFull}>{line}</Text> : null}
       </View>
 
-      {profile.headline ? <Text style={styles.headline}>{profile.headline}</Text> : null}
-
-      {(profile.title || profile.employer) ? (
-        <Row label="Employer & title" value={[profile.title, profile.employer].filter(Boolean).join(' at ')} />
-      ) : null}
-      {education ? <Row label="Education" value={education} /> : null}
-      {profile.bio ? <Row label="Bio" value={profile.bio} /> : null}
-
-      {attrs ? (
-        <>
-          <Row
-            label="Role / Industry / Seniority"
+      <View style={styles.detailsCard}>
+        {subtitle ? <DetailRow label="Employer & title" value={subtitle} /> : null}
+        {education ? <DetailRow label="Education" value={education} /> : null}
+        {attrs ? (
+          <DetailRow
+            label="Role · Industry · Seniority"
             value={[
               ROLE_CATEGORY_LABELS[attrs.role_category],
               INDUSTRY_LABELS[attrs.industry],
               SENIORITY_BAND_LABELS[attrs.seniority_band],
             ].join(' · ')}
           />
-          {attrs.looking_for ? <Row label="Looking for" value={attrs.looking_for} /> : null}
-          {attrs.can_offer ? <Row label="Can offer" value={attrs.can_offer} /> : null}
-        </>
-      ) : null}
-
-      <View style={styles.linkedinRow}>
-        {profile.linkedin_verified ? (
-          <Text style={styles.verifiedBadge}>✓ LinkedIn Verified</Text>
-        ) : (
-          <Text style={styles.notVerified}>LinkedIn not verified</Text>
-        )}
+        ) : null}
+        {attrs?.looking_for ? <DetailRow label="Looking for" value={attrs.looking_for} /> : null}
+        {attrs?.can_offer ? <DetailRow label="Can offer" value={attrs.can_offer} /> : null}
+        {profile.bio ? <DetailRow label="Bio" value={profile.bio} last /> : null}
       </View>
 
-      <Pressable style={styles.editButton} onPress={() => router.push('/edit-profile')}>
-        <Text style={styles.editButtonText}>Edit profile</Text>
-      </Pressable>
-
-      <Pressable style={styles.blockedLink} onPress={() => router.push('/blocked-users')}>
-        <Text style={styles.blockedLinkText}>Blocked users</Text>
-      </Pressable>
-
-      <Pressable style={styles.signOutButton} onPress={handleSignOut}>
-        <Text style={styles.signOutText}>Sign out</Text>
-      </Pressable>
-
-      <Pressable style={styles.deleteAccountButton} onPress={() => router.push('/delete-account')}>
-        <Text style={styles.deleteAccountText}>Delete account</Text>
-      </Pressable>
+      <SecondaryButton label="Edit profile" onPress={() => router.push('/edit-profile')} />
     </ScrollView>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function DetailRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
   return (
-    <View style={styles.row}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value}</Text>
+    <View style={[styles.detailRow, !last && styles.detailRowDivider]}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  content: { padding: 20, paddingBottom: 60 },
-  avatarWrap: { alignSelf: 'center', marginBottom: 12 },
-  avatar: { width: 100, height: 100, borderRadius: 50 },
-  avatarPlaceholder: { backgroundColor: '#eee', justifyContent: 'center', alignItems: 'center' },
-  avatarPlaceholderText: { color: '#888', fontSize: 12 },
-  name: { fontSize: 22, fontWeight: '700', textAlign: 'center' },
-  headline: { fontSize: 14, color: '#555', textAlign: 'center', marginTop: 4, marginBottom: 8 },
-  anonSection: {
-    backgroundColor: '#fafafa',
-    borderRadius: 12,
-    padding: 14,
-    marginTop: 16,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#eee',
+  container: { flex: 1, backgroundColor: colors.paper },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.paper },
+  loadingText: { color: colors.textSecondary },
+  content: { padding: spacing.gutter, paddingBottom: 60 },
+  topRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  spacer: { flex: 1 },
+  identityBlock: { alignItems: 'center', marginTop: 12, gap: 4 },
+  name: { ...typeStyles.screenHeadline, fontSize: 26, marginTop: 8 },
+  subtitle: { fontSize: 13.5, color: colors.textSecondary },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.liveChipBg,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 6,
   },
-  anonLabel: { fontSize: 12, fontWeight: '700', color: '#888', marginBottom: 4 },
-  anonLinePreviewLabel: { marginTop: 12 },
-  anonLine: { fontSize: 15, color: '#111' },
-  visibilityRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  visibilityTextWrap: { flex: 1 },
-  visibilityHint: { fontSize: 12, color: '#888', marginTop: 4, lineHeight: 16 },
-  row: { marginTop: 16 },
-  rowLabel: { fontSize: 12, color: '#888', marginBottom: 2 },
-  rowValue: { fontSize: 15, color: '#111' },
-  linkedinRow: { marginTop: 20, alignItems: 'center' },
-  verifiedBadge: { color: '#0A66C2', fontWeight: '700', fontSize: 14 },
-  notVerified: { color: '#999', fontSize: 13 },
-  editButton: { backgroundColor: '#111', borderRadius: 8, padding: 14, alignItems: 'center', marginTop: 28 },
-  editButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  verifiedBadgeText: { fontSize: 11, fontWeight: '600', color: colors.liveChipText },
+  verifyChip: {
+    borderWidth: 1,
+    borderColor: colors.rule,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    marginTop: 6,
+  },
+  verifyChipText: { fontSize: 11.5, fontWeight: '600', color: colors.textSecondary },
+  visibilityCard: { backgroundColor: colors.brand, borderRadius: radii.card, padding: 17, marginTop: 22 },
+  visibilityTopRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  visibilityTextWrap: { flex: 1, gap: 4 },
+  visibilityState: { fontSize: 15, fontWeight: '600', color: colors.inkOn },
+  visibilityDivider: { height: 1, backgroundColor: 'rgba(245,239,230,.16)', marginVertical: 14 },
+  previewRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  previewScale: { transform: [{ scale: 0.85 }], marginLeft: -6 },
+  previewLine: { ...typeStyles.matchRationaleChat, color: colors.inkOn, flex: 1 },
+  previewLineFull: { fontFamily: 'Newsreader_400Regular', fontSize: 16, color: colors.inkOn, marginTop: 10 },
+  detailsCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.rule,
+    borderRadius: radii.card,
+    marginTop: 20,
+    marginBottom: 24,
+    paddingHorizontal: 16,
+    overflow: 'hidden',
+  },
+  detailRow: { paddingVertical: 13 },
+  detailRowDivider: { borderBottomWidth: 1, borderColor: colors.ruleInner },
+  detailLabel: { fontFamily: 'monospace', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1.4, color: colors.textMuted, marginBottom: 4 },
+  detailValue: { fontSize: 15, color: colors.ink },
   buttonDisabled: { opacity: 0.5 },
   securityBanner: {
-    backgroundColor: '#fdf6ee',
+    backgroundColor: colors.surfaceSunken,
     borderRadius: 10,
     padding: 14,
-    marginBottom: 20,
+    marginTop: 16,
     borderWidth: 1,
-    borderColor: '#f0dfc4',
+    borderColor: colors.rule,
   },
-  securityBannerTitle: { fontSize: 14, fontWeight: '700', color: '#a05a2c' },
-  securityBannerText: { fontSize: 13, color: '#775a3c', marginTop: 4 },
+  securityBannerTitle: { fontSize: 14, fontWeight: '700', color: colors.brass },
+  securityBannerText: { fontSize: 13, color: colors.textTertiary, marginTop: 4 },
   securityBannerButton: {
-    backgroundColor: '#a05a2c',
+    backgroundColor: colors.brass,
     borderRadius: 8,
     paddingVertical: 10,
     alignItems: 'center',
     marginTop: 10,
   },
-  securityBannerButtonText: { color: '#fff', fontSize: 13, fontWeight: '600' },
-  blockedLink: { alignItems: 'center', marginTop: 24 },
-  blockedLinkText: { color: '#666', fontSize: 14 },
-  signOutButton: { alignItems: 'center', marginTop: 12 },
-  signOutText: { color: '#cc3333', fontSize: 14 },
-  deleteAccountButton: { alignItems: 'center', marginTop: 24, paddingVertical: 10 },
-  deleteAccountText: { color: '#cc3333', fontSize: 14, fontWeight: '700' },
+  securityBannerButtonText: { color: colors.inkOn, fontSize: 13, fontWeight: '600' },
 });

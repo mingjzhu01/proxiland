@@ -3,6 +3,9 @@ import { View, Text, Pressable, StyleSheet, Modal, ScrollView } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { groupedOptions, type IntentOptionType } from '../lib/eventIntentOptions';
 import { EVENT_INTENT_DEFAULTS } from '../lib/eventIntentConfig';
+import { colors, radii, typeStyles } from '../lib/theme';
+import { PrimaryButton } from './Buttons';
+import { SectionLabel } from './SectionLabel';
 
 type Props = {
   visible: boolean;
@@ -50,23 +53,28 @@ export function IntentOptionPicker({ visible, type, title, selectedIds, onClose,
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.sheet}>
+          <View style={styles.grabHandle} />
           <View style={styles.header}>
-            <Text style={styles.title}>{title}</Text>
+            <View style={styles.headerText}>
+              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.subtitle}>
+                Pick up to {maxSelections} · {pending.length} chosen
+              </Text>
+            </View>
             <Pressable onPress={onClose} hitSlop={12}>
-              <Ionicons name="close" size={24} color="#666" />
+              <Ionicons name="close" size={22} color={colors.textMuted} />
             </Pressable>
           </View>
-          <Text style={styles.subtitle}>
-            Pick 1 to {maxSelections} — {pending.length} of {maxSelections} selected
-          </Text>
           {limitMessage ? (
-            <Text style={styles.limitMessage}>You can pick up to {maxSelections} — remove one to add another.</Text>
+            <Text style={styles.limitMessage}>
+              You can pick up to {maxSelections} — remove one to add another.
+            </Text>
           ) : null}
 
           <ScrollView style={styles.scroll}>
             {groupedOptions(type).map(({ group, options }) => (
               <View key={group} style={styles.group}>
-                <Text style={styles.groupLabel}>{group}</Text>
+                <SectionLabel tone="brass" style={styles.groupLabel}>{group}</SectionLabel>
                 {options.map((option) => {
                   const selected = pending.includes(option.id);
                   return (
@@ -75,10 +83,10 @@ export function IntentOptionPicker({ visible, type, title, selectedIds, onClose,
                       style={[styles.optionRow, selected && styles.optionRowSelected]}
                       onPress={() => toggle(option.id)}
                     >
+                      <Text style={[styles.optionLabel, selected && styles.optionLabelSelected]}>{option.label}</Text>
                       <View style={[styles.checkbox, selected && styles.checkboxSelected]}>
-                        {selected ? <Ionicons name="checkmark" size={14} color="#fff" /> : null}
+                        {selected ? <Ionicons name="checkmark" size={13} color={colors.ink} /> : null}
                       </View>
-                      <Text style={styles.optionLabel}>{option.label}</Text>
                     </Pressable>
                   );
                 })}
@@ -86,13 +94,13 @@ export function IntentOptionPicker({ visible, type, title, selectedIds, onClose,
             ))}
           </ScrollView>
 
-          <Pressable
-            style={[styles.doneButton, pending.length === 0 && styles.buttonDisabled]}
-            onPress={handleDone}
-            disabled={pending.length === 0}
-          >
-            <Text style={styles.doneButtonText}>Done</Text>
-          </Pressable>
+          <View style={styles.footer}>
+            <PrimaryButton
+              label={`Done · ${pending.length} selected`}
+              onPress={handleDone}
+              disabled={pending.length === 0}
+            />
+          </View>
         </View>
       </View>
     </Modal>
@@ -100,43 +108,57 @@ export function IntentOptionPicker({ visible, type, title, selectedIds, onClose,
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
+  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(36,28,22,.42)' },
   sheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    paddingBottom: 32,
-    maxHeight: '85%',
+    backgroundColor: colors.paper,
+    borderTopLeftRadius: radii.sheet,
+    borderTopRightRadius: radii.sheet,
+    paddingTop: 12,
+    maxHeight: '88%',
   },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  title: { fontSize: 18, fontWeight: '700' },
-  subtitle: { fontSize: 13, color: '#666', marginTop: 4, marginBottom: 4 },
-  limitMessage: { fontSize: 12, color: '#a05a2c', marginBottom: 4 },
-  scroll: { marginTop: 8, marginBottom: 16 },
-  group: { marginBottom: 16 },
-  groupLabel: { fontSize: 12, fontWeight: '700', color: '#888', marginBottom: 6, textTransform: 'uppercase' },
+  grabHandle: { width: 38, height: 4, borderRadius: 2, backgroundColor: colors.dashedBorder, alignSelf: 'center', marginBottom: 16 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderColor: colors.rule,
+  },
+  headerText: { flex: 1 },
+  title: { ...typeStyles.screenHeadline, fontSize: 24, lineHeight: 28 },
+  subtitle: { fontSize: 12.5, color: colors.textTertiary, marginTop: 4 },
+  limitMessage: { fontSize: 12, color: colors.brass, paddingHorizontal: 20, paddingTop: 10 },
+  scroll: { paddingHorizontal: 20 },
+  group: { marginTop: 18 },
+  groupLabel: { marginBottom: 8 },
   optionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+    justifyContent: 'space-between',
+    minHeight: 48,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    marginBottom: 8,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.rule,
   },
-  optionRowSelected: { backgroundColor: '#f4efe9' },
+  optionRowSelected: { backgroundColor: colors.ink, borderColor: colors.ink },
+  optionLabel: { fontSize: 15, fontWeight: '500', color: colors.ink, flexShrink: 1 },
+  optionLabelSelected: { color: colors.inkOn },
   checkbox: {
     width: 20,
     height: 20,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: '#ccc',
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: colors.dashedBorder,
+    borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'transparent',
   },
-  checkboxSelected: { borderColor: '#4A3B31', backgroundColor: '#4A3B31' },
-  optionLabel: { fontSize: 15, color: '#111', flexShrink: 1 },
-  doneButton: { backgroundColor: '#4A3B31', borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
-  doneButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  buttonDisabled: { opacity: 0.5 },
+  checkboxSelected: { backgroundColor: colors.paper, borderStyle: 'solid', borderColor: colors.paper },
+  footer: { padding: 20, paddingBottom: 32, borderTopWidth: 1, borderColor: colors.rule, marginTop: 12 },
 });

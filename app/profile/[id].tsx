@@ -2,7 +2,6 @@ import { useCallback, useState } from 'react';
 import {
   View,
   Text,
-  Image,
   Pressable,
   StyleSheet,
   ScrollView,
@@ -15,19 +14,28 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getProfile } from '../../lib/api/profile';
 import { sendRequest } from '../../lib/api/requests';
 import { blockUser, getConnectionWith } from '../../lib/api/connections';
+import { fetchOverlap, type Overlap } from '../../lib/api/reveal';
 import { formatEducation } from '../../lib/formatEducation';
 import { ReportSheet } from '../../components/ReportSheet';
+import { LetteredAvatar } from '../../components/LetteredAvatar';
+import { WhyYouTwo } from '../../components/WhyYouTwo';
+import { PrimaryButton, SecondaryButton } from '../../components/Buttons';
+import { colors, avatarSizes, spacing, radii } from '../../lib/theme';
 import type { Profile } from '../../lib/types';
 
 export default function ProfileDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [connectionId, setConnectionId] = useState<string | null>(null);
+  const [overlap, setOverlap] = useState<Overlap>(null);
   const [isSending, setIsSending] = useState(false);
 
   const [coffeeModalVisible, setCoffeeModalVisible] = useState(false);
@@ -46,6 +54,7 @@ export default function ProfileDetail() {
         setHasLoaded(true);
       });
       getConnectionWith(id).then(setConnectionId);
+      fetchOverlap(id).then(setOverlap).catch(() => setOverlap(null));
     }, [id])
   );
 
@@ -101,95 +110,96 @@ export default function ProfileDetail() {
     ]);
   }
 
+  const header = (
+    <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+      <Pressable onPress={() => router.back()} hitSlop={10}>
+        <Ionicons name="chevron-back" size={22} color={colors.ink} />
+      </Pressable>
+      <View style={styles.spacer} />
+      <Pressable onPress={handleBlockOrReport} hitSlop={12}>
+        <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />
+      </Pressable>
+    </View>
+  );
+
   if (!profile) {
     return (
-      <View style={styles.centered}>
-        <Text>{hasLoaded ? "This profile isn't available right now." : 'Loading…'}</Text>
+      <View style={styles.container}>
+        {header}
+        <View style={styles.centered}>
+          <Text style={styles.loadingText}>{hasLoaded ? "This profile isn't available right now." : 'Loading…'}</Text>
+        </View>
       </View>
     );
   }
 
+  const subtitle = [profile.title, profile.employer].filter(Boolean).join(' at ');
+  const education = formatEducation(profile);
+
   return (
-    <>
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {profile.photo_url ? (
-        <Image source={{ uri: profile.photo_url }} style={styles.avatar} />
-      ) : (
-        <View style={[styles.avatar, styles.avatarPlaceholder]}>
-          <Text style={styles.avatarInitial}>{profile.full_name.charAt(0).toUpperCase()}</Text>
+    <View style={styles.container}>
+      {header}
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.identityBlock}>
+          <LetteredAvatar name={profile.full_name} photoUrl={profile.photo_url} size={avatarSizes.ownProfile} />
+          <Text style={styles.name}>{profile.full_name}</Text>
+          {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+          {profile.linkedin_verified ? (
+            <View style={styles.verifiedBadge}>
+              <Ionicons name="checkmark-circle" size={13} color={colors.live} />
+              <Text style={styles.verifiedBadgeText}>LinkedIn verified</Text>
+            </View>
+          ) : null}
+          {profile.linkedin_url ? (
+            <Pressable onPress={() => Linking.openURL(profile.linkedin_url!)}>
+              <Text style={styles.linkedinLink}>View LinkedIn profile</Text>
+            </Pressable>
+          ) : null}
         </View>
-      )}
 
-      <Text style={styles.name}>{profile.full_name}</Text>
-      {profile.linkedin_verified ? (
-        <Text style={styles.verifiedBadge}>✓ LinkedIn Verified</Text>
-      ) : null}
-      {profile.linkedin_url ? (
-        <Pressable onPress={() => Linking.openURL(profile.linkedin_url!)}>
-          <Text style={styles.linkedinLink}>View LinkedIn profile</Text>
-        </Pressable>
-      ) : null}
-      {profile.headline ? <Text style={styles.headline}>{profile.headline}</Text> : null}
-      {(profile.title || profile.employer) ? (
-        <Text style={styles.subtitle}>
-          {[profile.title, profile.employer].filter(Boolean).join(' at ')}
-        </Text>
-      ) : null}
-      {formatEducation(profile) ? (
-        <Text style={styles.subtitle}>{formatEducation(profile)}</Text>
-      ) : null}
-      {profile.bio ? (
-        <>
-          <View style={styles.divider} />
-          <Text style={styles.bio}>{profile.bio}</Text>
-        </>
-      ) : null}
+        {overlap ? (
+          <View style={styles.whyCard}>
+            <WhyYouTwo reason={overlap.phrase} variant="plain" />
+          </View>
+        ) : null}
 
-      {connectionId ? (
-        <>
-          <Pressable
-            style={styles.button}
-            onPress={() => router.push(`/chat/${connectionId}`)}
-          >
-            <Text style={styles.buttonText}>💬 Message</Text>
-          </Pressable>
-          <Pressable
-            style={[styles.button, styles.coffeeButton, isSending && styles.buttonDisabled]}
-            onPress={() => setCoffeeModalVisible(true)}
-            disabled={isSending}
-          >
-            <Text style={styles.buttonText}>☕ Ask for coffee</Text>
-          </Pressable>
-        </>
-      ) : (
-        <>
-          <Pressable
-            style={[styles.button, isSending && styles.buttonDisabled]}
-            onPress={handleConnect}
-            disabled={isSending}
-          >
-            <Text style={styles.buttonText}>Connect</Text>
-          </Pressable>
-          <Text style={styles.coffeeHint}>Connect first to schedule a coffee chat</Text>
-        </>
-      )}
+        {(subtitle || education || profile.bio) ? (
+          <View style={styles.detailsCard}>
+            {subtitle ? <DetailRow label="Employer & title" value={subtitle} /> : null}
+            {education ? <DetailRow label="Education" value={education} /> : null}
+            {profile.bio ? <DetailRow label="Bio" value={profile.bio} last /> : null}
+          </View>
+        ) : null}
 
-      <Pressable style={styles.reportLink} onPress={handleBlockOrReport}>
-        <Text style={styles.reportLinkText}>Block or Report</Text>
-      </Pressable>
+        {connectionId ? (
+          <View style={styles.buttonStack}>
+            <PrimaryButton label="Message" onPress={() => router.push(`/chat/${connectionId}`)} />
+            <SecondaryButton
+              label="Ask for coffee"
+              loading={isSending}
+              onPress={() => setCoffeeModalVisible(true)}
+            />
+          </View>
+        ) : (
+          <View style={styles.buttonStack}>
+            <PrimaryButton label="Connect" loading={isSending} onPress={handleConnect} />
+            <Text style={styles.coffeeHint}>Connect first to schedule a coffee chat</Text>
+          </View>
+        )}
+      </ScrollView>
 
-      <Modal visible={coffeeModalVisible} animationType="slide" transparent>
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
+      <Modal visible={coffeeModalVisible} animationType="slide" transparent onRequestClose={() => setCoffeeModalVisible(false)}>
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.modalCard}>
+            <View style={styles.grabHandle} />
             <Text style={styles.modalTitle}>Ask {profile.full_name.split(' ')[0]} for coffee</Text>
 
+            <View style={styles.modalDivider} />
             <Text style={styles.fieldLabel}>Note (optional)</Text>
             <TextInput
               style={styles.input}
               placeholder="Free to grab coffee?"
+              placeholderTextColor={colors.textMuted}
               value={coffeeMessage}
               onChangeText={setCoffeeMessage}
             />
@@ -198,6 +208,7 @@ export default function ProfileDetail() {
             <TextInput
               style={styles.input}
               placeholder="e.g. Blue Bottle on Market St"
+              placeholderTextColor={colors.textMuted}
               value={coffeeLocation}
               onChangeText={setCoffeeLocation}
             />
@@ -219,64 +230,97 @@ export default function ProfileDetail() {
               onChange={(_, time) => time && setCoffeeTime(time)}
             />
 
-            <Pressable
-              style={[styles.button, styles.coffeeButton, isSending && styles.buttonDisabled]}
-              onPress={handleSendCoffee}
-              disabled={isSending}
-            >
-              <Text style={styles.buttonText}>{isSending ? 'Sending…' : 'Send coffee request'}</Text>
-            </Pressable>
-
-            <Pressable style={styles.cancelLink} onPress={() => setCoffeeModalVisible(false)}>
-              <Text style={styles.cancelLinkText}>Cancel</Text>
-            </Pressable>
+            <View style={styles.modalFooter}>
+              <PrimaryButton label="Send coffee request" loading={isSending} onPress={handleSendCoffee} />
+              <Pressable style={styles.cancelLink} onPress={() => setCoffeeModalVisible(false)}>
+                <Text style={styles.cancelLinkText}>Cancel</Text>
+              </Pressable>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </ScrollView>
-    <ReportSheet
-      visible={reportVisible}
-      targetUserId={id ?? null}
-      context="profile"
-      onClose={() => setReportVisible(false)}
-    />
-    </>
+
+      <ReportSheet
+        visible={reportVisible}
+        targetUserId={id ?? null}
+        context="profile"
+        onClose={() => setReportVisible(false)}
+      />
+    </View>
+  );
+}
+
+function DetailRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
+  return (
+    <View style={[styles.detailRow, !last && styles.detailRowDivider]}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value}</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  content: { padding: 20, alignItems: 'center' },
-  avatar: { width: 120, height: 120, borderRadius: 60, marginBottom: 16 },
-  avatarPlaceholder: { backgroundColor: '#ddd', justifyContent: 'center', alignItems: 'center' },
-  avatarInitial: { fontSize: 40, fontWeight: '700', color: '#555' },
-  name: { fontSize: 22, fontWeight: '700' },
-  headline: { fontSize: 15, color: '#555', marginTop: 4, textAlign: 'center' },
-  verifiedBadge: { color: '#0A66C2', fontWeight: '700', fontSize: 13, marginTop: 6 },
-  linkedinLink: { color: '#0A66C2', fontSize: 13, marginTop: 4, textDecorationLine: 'underline' },
-  subtitle: { fontSize: 14, color: '#333', marginTop: 4 },
-  divider: { width: '100%', height: 1, backgroundColor: '#eee', marginTop: 20 },
-  bio: { fontSize: 14, color: '#444', marginTop: 16, textAlign: 'center' },
-  button: {
-    backgroundColor: '#111',
-    borderRadius: 8,
-    padding: 14,
+  container: { flex: 1, backgroundColor: colors.paper },
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 20,
-    width: '100%',
+    paddingHorizontal: spacing.gutter,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderColor: colors.rule,
   },
-  coffeeButton: { backgroundColor: '#a05a2c' },
-  buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  coffeeHint: { color: '#999', fontSize: 12, marginTop: 8, textAlign: 'center' },
-  reportLink: { marginTop: 24 },
-  reportLinkText: { color: '#999', fontSize: 13 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 20 },
-  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 16 },
-  fieldLabel: { fontSize: 13, color: '#666', marginBottom: 4, marginTop: 10 },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 15 },
+  spacer: { flex: 1 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingText: { color: colors.textSecondary },
+  content: { padding: spacing.gutter, alignItems: 'center' },
+  identityBlock: { alignItems: 'center', gap: 4 },
+  name: { fontFamily: 'Newsreader_400Regular', fontSize: 26, color: colors.ink, marginTop: 8 },
+  subtitle: { fontSize: 13.5, color: colors.textSecondary, textAlign: 'center' },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: colors.liveChipBg,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 6,
+  },
+  verifiedBadgeText: { fontSize: 11, fontWeight: '600', color: colors.liveChipText },
+  linkedinLink: { color: colors.brass, fontSize: 13, marginTop: 6, textDecorationLine: 'underline' },
+  whyCard: {
+    width: '100%',
+    backgroundColor: colors.surfaceSunken,
+    borderWidth: 1,
+    borderColor: colors.rule,
+    borderRadius: radii.card,
+    padding: 16,
+    marginTop: 20,
+  },
+  detailsCard: {
+    width: '100%',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.rule,
+    borderRadius: radii.card,
+    marginTop: 20,
+    paddingHorizontal: 16,
+    overflow: 'hidden',
+  },
+  detailRow: { paddingVertical: 13 },
+  detailRowDivider: { borderBottomWidth: 1, borderColor: colors.ruleInner },
+  detailLabel: { fontFamily: 'monospace', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1.4, color: colors.textMuted, marginBottom: 4 },
+  detailValue: { fontSize: 15, color: colors.ink },
+  buttonStack: { width: '100%', gap: 10, marginTop: 24 },
+  coffeeHint: { color: colors.textMuted, fontSize: 12, marginTop: 4, textAlign: 'center' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(36,28,22,.42)', justifyContent: 'flex-end' },
+  modalCard: { backgroundColor: colors.paper, borderTopLeftRadius: radii.sheet, borderTopRightRadius: radii.sheet, padding: 20, paddingBottom: 32 },
+  grabHandle: { width: 38, height: 4, borderRadius: 2, backgroundColor: colors.dashedBorder, alignSelf: 'center', marginBottom: 16 },
+  modalTitle: { fontFamily: 'Newsreader_400Regular', fontSize: 24, color: colors.ink },
+  modalDivider: { height: 1, backgroundColor: colors.rule, marginTop: 16, marginBottom: 4 },
+  fieldLabel: { fontSize: 13, color: colors.textTertiary, marginBottom: 4, marginTop: 14 },
+  input: { borderWidth: 1, borderColor: colors.rule, borderRadius: 10, padding: 12, fontSize: 15, color: colors.ink, backgroundColor: colors.surface },
+  modalFooter: { marginTop: 20 },
   cancelLink: { alignItems: 'center', marginTop: 14 },
-  cancelLinkText: { color: '#666', fontSize: 14 },
+  cancelLinkText: { color: colors.textTertiary, fontSize: 14, fontWeight: '600' },
 });

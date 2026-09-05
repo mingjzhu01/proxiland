@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Alert, Modal } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { goVisible, goInvisible, getMyActiveVisibility } from '../lib/api/visibility';
 import { DurationPicker } from './DurationPicker';
+import { colors, radii } from '../lib/theme';
 
 const DEFAULT_DURATION_HOURS = 4;
 
@@ -13,7 +15,18 @@ function timeRemaining(expiresAt: string): string {
   return `${Math.round(minutes / 60)}h left`;
 }
 
-export function VisibilityToggle({ onChange }: { onChange?: () => void }) {
+// Now a bottom sheet (triggered by the compact "Visible · Xh" pill in the Nearby header)
+// rather than a block permanently pinned to the top of the feed — same goVisible/goInvisible
+// logic as before, just relocated per the visual redesign.
+export function VisibilityToggle({
+  visible,
+  onClose,
+  onChange,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onChange?: () => void;
+}) {
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [selectedHours, setSelectedHours] = useState(DEFAULT_DURATION_HOURS);
   const [isBusy, setIsBusy] = useState(false);
@@ -24,8 +37,8 @@ export function VisibilityToggle({ onChange }: { onChange?: () => void }) {
   }, []);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    if (visible) refresh();
+  }, [visible, refresh]);
 
   async function handleGoVisible() {
     setIsBusy(true);
@@ -33,6 +46,7 @@ export function VisibilityToggle({ onChange }: { onChange?: () => void }) {
       await goVisible(selectedHours);
       await refresh();
       onChange?.();
+      onClose();
     } catch (error: any) {
       Alert.alert('Could not go visible', error.message);
     } finally {
@@ -46,6 +60,7 @@ export function VisibilityToggle({ onChange }: { onChange?: () => void }) {
       await goInvisible();
       setExpiresAt(null);
       onChange?.();
+      onClose();
     } catch (error: any) {
       Alert.alert('Error', error.message);
     } finally {
@@ -53,47 +68,57 @@ export function VisibilityToggle({ onChange }: { onChange?: () => void }) {
     }
   }
 
-  if (expiresAt) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.statusRow}>
-          <View style={styles.dot} />
-          <Text style={styles.statusText}>Visible nearby · {timeRemaining(expiresAt)}</Text>
-        </View>
-        <Pressable style={styles.stopButton} onPress={handleGoInvisible} disabled={isBusy}>
-          <Text style={styles.stopButtonText}>Stop</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.prompt}>You're not visible to anyone right now.</Text>
-      <DurationPicker value={selectedHours} onChange={setSelectedHours} />
-      <Pressable style={styles.goButton} onPress={handleGoVisible} disabled={isBusy}>
-        <Text style={styles.goButtonText}>
-          {isBusy ? 'Going visible…' : `Go visible for ${selectedHours}h`}
-        </Text>
-      </Pressable>
-    </View>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={styles.overlay}>
+        <View style={styles.sheet}>
+          <View style={styles.grabHandle} />
+          <View style={styles.headerRow}>
+            <Text style={styles.title}>Your visibility</Text>
+            <Pressable onPress={onClose} hitSlop={12}>
+              <Ionicons name="close" size={22} color={colors.textMuted} />
+            </Pressable>
+          </View>
+
+          {expiresAt ? (
+            <>
+              <View style={styles.statusRow}>
+                <View style={styles.dot} />
+                <Text style={styles.statusText}>Visible nearby · {timeRemaining(expiresAt)}</Text>
+              </View>
+              <Pressable style={styles.stopButton} onPress={handleGoInvisible} disabled={isBusy}>
+                <Text style={styles.stopButtonText}>Stop being visible</Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <Text style={styles.prompt}>You're not visible to anyone right now.</Text>
+              <DurationPicker value={selectedHours} onChange={setSelectedHours} />
+              <Pressable style={styles.goButton} onPress={handleGoVisible} disabled={isBusy}>
+                <Text style={styles.goButtonText}>
+                  {isBusy ? 'Going visible…' : `Go visible for ${selectedHours}h`}
+                </Text>
+              </Pressable>
+            </>
+          )}
+        </View>
+      </View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 16, backgroundColor: '#fafafa', borderBottomWidth: 1, borderColor: '#eee' },
-  prompt: { fontSize: 14, color: '#555', marginBottom: 10, textAlign: 'center' },
-  goButton: {
-    backgroundColor: '#111',
-    borderRadius: 20,
-    paddingVertical: 10,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  goButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(36,28,22,.42)' },
+  sheet: { backgroundColor: colors.paper, borderTopLeftRadius: radii.sheet, borderTopRightRadius: radii.sheet, padding: 20, paddingBottom: 36 },
+  grabHandle: { width: 38, height: 4, borderRadius: 2, backgroundColor: colors.dashedBorder, alignSelf: 'center', marginBottom: 16 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  title: { fontSize: 18, fontWeight: '700', color: colors.ink },
+  prompt: { fontSize: 14, color: colors.textSecondary, marginBottom: 14, textAlign: 'center' },
+  goButton: { backgroundColor: colors.ink, borderRadius: radii.button, paddingVertical: 14, alignItems: 'center', marginTop: 14 },
+  goButtonText: { color: colors.inkOn, fontSize: 15, fontWeight: '600' },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2ecc71' },
-  statusText: { fontSize: 14, fontWeight: '600', flex: 1 },
-  stopButton: { alignSelf: 'flex-start', marginTop: 8 },
-  stopButtonText: { color: '#cc3333', fontSize: 13, fontWeight: '600' },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.live },
+  statusText: { fontSize: 15, fontWeight: '600', color: colors.ink, flex: 1 },
+  stopButton: { alignSelf: 'flex-start', marginTop: 14 },
+  stopButtonText: { color: colors.error, fontSize: 14, fontWeight: '600' },
 });

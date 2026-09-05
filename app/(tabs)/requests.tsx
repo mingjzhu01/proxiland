@@ -5,6 +5,12 @@ import { getIncomingRequests, getOutgoingRequests, respondToRequest, hideRequest
 import { getIncomingRevealRequests, revealRequest, type IncomingRevealRequest } from '../../lib/api/reveal';
 import { useRequestsBadge } from '../../lib/requestsBadge';
 import { SwipeToDelete } from '../../components/SwipeToDelete';
+import { Card } from '../../components/Card';
+import { LetteredAvatar } from '../../components/LetteredAvatar';
+import { SectionLabel } from '../../components/SectionLabel';
+import { SegmentedControl, type Segment } from '../../components/SegmentedControl';
+import { PrimaryButton, SecondaryButton } from '../../components/Buttons';
+import { colors, avatarSizes, typeStyles, spacing } from '../../lib/theme';
 import type { ConnectionRequest } from '../../lib/types';
 
 function formatMeetingTime(meetingAt: string | null): string | null {
@@ -22,6 +28,8 @@ export default function Requests() {
   const [incoming, setIncoming] = useState<ConnectionRequest[]>([]);
   const [outgoing, setOutgoing] = useState<ConnectionRequest[]>([]);
   const [incomingReveals, setIncomingReveals] = useState<IncomingRevealRequest[]>([]);
+  const [ignoredRevealIds, setIgnoredRevealIds] = useState<Set<string>>(new Set());
+  const [tab, setTab] = useState<'waiting' | 'sent'>('waiting');
   const [isLoading, setIsLoading] = useState(false);
   const { refresh: refreshBadge } = useRequestsBadge();
 
@@ -62,6 +70,14 @@ export default function Requests() {
     }
   }
 
+  // Local-only dismiss — there's no backend "decline a reveal request" state today (only
+  // accept). Hides it from this device's list without persisting; it'll reappear on reload.
+  // A real decline mechanism (mirroring hideRequestForMe for connection_requests) is a
+  // follow-up, not a presentation-layer change.
+  function handleIgnore(id: string) {
+    setIgnoredRevealIds((prev) => new Set(prev).add(id));
+  }
+
   useFocusEffect(
     useCallback(() => {
       load();
@@ -82,100 +98,121 @@ export default function Requests() {
     }
   }
 
+  const visibleReveals = incomingReveals.filter((r) => !ignoredRevealIds.has(r.id));
+  const waitingCount = visibleReveals.length + incoming.length;
+  const segments: Segment[] = [
+    { key: 'waiting', label: 'Waiting', count: waitingCount },
+    { key: 'sent', label: 'Sent', count: outgoing.length },
+  ];
+
   return (
     <FlatList
       style={styles.container}
-      refreshControl={<RefreshControl refreshing={isLoading} onRefresh={load} />}
+      refreshControl={<RefreshControl refreshing={isLoading} onRefresh={load} tintColor={colors.brand} />}
       data={[]}
       renderItem={null}
       ListHeaderComponent={
         <>
-          {incomingReveals.length > 0 ? (
+          <View style={styles.header}>
+            <SectionLabel tone="brass">Requests</SectionLabel>
+            <Text style={styles.headline}>
+              {waitingCount > 0
+                ? `${waitingCount} ${waitingCount === 1 ? 'person is' : 'people are'} waiting on you`
+                : "You're all caught up"}
+            </Text>
+            <SegmentedControl segments={segments} activeKey={tab} onChange={(k) => setTab(k as typeof tab)} />
+          </View>
+
+          {tab === 'waiting' ? (
             <>
-              <Text style={styles.sectionTitle}>Asking to connect</Text>
-              {incomingReveals.map((req) => (
-                <View key={req.id} style={styles.requestRow}>
-                  <View style={styles.requestInfo}>
-                    <Text style={styles.requestName}>{req.requester?.full_name ?? 'Someone'}</Text>
-                    {req.requester?.headline ? (
-                      <Text style={styles.requestType}>{req.requester.headline}</Text>
-                    ) : null}
-                    <Text style={styles.requestMessage}>{req.connection_line}</Text>
+              {visibleReveals.map((req) => (
+                <Card key={req.id} style={styles.card}>
+                  <View style={styles.headRow}>
+                    <LetteredAvatar name={req.requester?.full_name ?? null} photoUrl={req.requester?.photo_url} size={avatarSizes.matchCard} />
+                    <View style={styles.headInfo}>
+                      <Text style={typeStyles.cardName}>{req.requester?.full_name ?? 'Someone'}</Text>
+                      {req.requester?.headline ? <Text style={typeStyles.cardSubtitle}>{req.requester.headline}</Text> : null}
+                    </View>
+                    <View style={styles.askedBadge}>
+                      <Text style={styles.askedBadgeText}>Asked</Text>
+                    </View>
                   </View>
-                  <Pressable
-                    style={[styles.actionButton, styles.acceptButton]}
-                    onPress={() => handleReveal(req.id)}
-                  >
-                    <Text style={styles.acceptText}>Share my profile</Text>
-                  </Pressable>
-                </View>
-              ))}
-            </>
-          ) : null}
-
-          <Text style={styles.sectionTitle}>Incoming</Text>
-          {incoming.length === 0 ? (
-            <Text style={styles.empty}>No incoming requests.</Text>
-          ) : (
-            incoming.map((req) => (
-              <View key={req.id} style={styles.requestRow}>
-                <View style={styles.requestInfo}>
-                  <Text style={styles.requestName}>{req.sender?.full_name ?? 'Someone'}</Text>
-                  <Text style={styles.requestType}>
-                    {req.type === 'coffee' ? '☕ wants to grab coffee' : 'wants to connect'}
+                  <View style={styles.divider} />
+                  <SectionLabel tone="brass" style={styles.whyLabel}>Why she asked</SectionLabel>
+                  <Text style={styles.revealLine}>{req.connection_line}</Text>
+                  <Text style={styles.explainer}>
+                    She can already see your profile. Sharing back is what opens the conversation.
                   </Text>
-                  {req.type === 'coffee' && (formatMeetingTime(req.meeting_at) || req.meeting_location) ? (
-                    <Text style={styles.requestMeeting}>
-                      {[formatMeetingTime(req.meeting_at), req.meeting_location]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </Text>
-                  ) : null}
-                  {req.message ? <Text style={styles.requestMessage}>{req.message}</Text> : null}
-                </View>
-                <View style={styles.actions}>
-                  <Pressable
-                    style={[styles.actionButton, styles.acceptButton]}
-                    onPress={() => handleRespond(req.id, 'accepted')}
-                  >
-                    <Text style={styles.acceptText}>Accept</Text>
-                  </Pressable>
-                  <Pressable
-                    style={[styles.actionButton, styles.declineButton]}
-                    onPress={() => handleRespond(req.id, 'declined')}
-                  >
-                    <Text style={styles.declineText}>Decline</Text>
-                  </Pressable>
-                </View>
-              </View>
-            ))
-          )}
-
-          <Text style={styles.sectionTitle}>Sent</Text>
-          <Text style={styles.hint}>Swipe left to remove from your history</Text>
-          {outgoing.length === 0 ? (
-            <Text style={styles.empty}>No sent requests.</Text>
-          ) : (
-            outgoing.map((req) => (
-              <SwipeToDelete key={req.id} onDelete={() => handleDelete(req.id)}>
-                <View style={styles.requestRow}>
-                  <View style={styles.requestInfo}>
-                    <Text style={styles.requestName}>{req.receiver?.full_name ?? 'Someone'}</Text>
-                    <Text style={styles.requestType}>
-                      {req.type === 'coffee' ? '☕ coffee request' : 'connection request'} ·{' '}
-                      {req.status}
-                    </Text>
-                    {req.type === 'coffee' && (formatMeetingTime(req.meeting_at) || req.meeting_location) ? (
-                      <Text style={styles.requestMeeting}>
-                        {[formatMeetingTime(req.meeting_at), req.meeting_location]
-                          .filter(Boolean)
-                          .join(' · ')}
-                      </Text>
-                    ) : null}
+                  <View style={styles.buttonRow}>
+                    <View style={styles.flex1}>
+                      <PrimaryButton label="Share my profile" onPress={() => handleReveal(req.id)} />
+                    </View>
+                    <View style={styles.flex1}>
+                      <SecondaryButton label="Ignore" onPress={() => handleIgnore(req.id)} />
+                    </View>
                   </View>
-                </View>
-              </SwipeToDelete>
-            ))
+                </Card>
+              ))}
+
+              {incoming.length === 0 && visibleReveals.length === 0 ? (
+                <Text style={styles.empty}>No one's waiting on you right now.</Text>
+              ) : (
+                incoming.map((req) => (
+                  <Card key={req.id} style={styles.card}>
+                    <View style={styles.headRow}>
+                      <LetteredAvatar name={req.sender?.full_name ?? null} photoUrl={req.sender?.photo_url} size={avatarSizes.matchCard} />
+                      <View style={styles.headInfo}>
+                        <Text style={typeStyles.cardName}>{req.sender?.full_name ?? 'Someone'}</Text>
+                        <Text style={typeStyles.cardSubtitle}>
+                          {req.type === 'coffee' ? 'Wants to grab coffee' : 'Wants to connect'}
+                        </Text>
+                      </View>
+                      {req.type === 'coffee' ? (
+                        <View style={styles.coffeeBadge}>
+                          <Text style={styles.coffeeBadgeText}>Coffee</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    {req.type === 'coffee' && (formatMeetingTime(req.meeting_at) || req.meeting_location) ? (
+                      <View style={styles.meetingBlock}>
+                        <Text style={styles.meetingLine}>{formatMeetingTime(req.meeting_at)}</Text>
+                        {req.meeting_location ? <Text style={styles.meetingLine}>{req.meeting_location}</Text> : null}
+                      </View>
+                    ) : null}
+                    {req.message ? <Text style={styles.messageQuote}>"{req.message}"</Text> : null}
+                    <View style={styles.buttonRow}>
+                      <View style={styles.flex1}>
+                        <PrimaryButton label="Accept" onPress={() => handleRespond(req.id, 'accepted')} />
+                      </View>
+                      <View style={styles.flex1}>
+                        <SecondaryButton label="Decline" onPress={() => handleRespond(req.id, 'declined')} />
+                      </View>
+                    </View>
+                  </Card>
+                ))
+              )}
+            </>
+          ) : (
+            <>
+              <Text style={styles.hint}>Swipe left to remove from your history</Text>
+              {outgoing.length === 0 ? (
+                <Text style={styles.empty}>No sent requests.</Text>
+              ) : (
+                outgoing.map((req) => (
+                  <SwipeToDelete key={req.id} onDelete={() => handleDelete(req.id)}>
+                    <View style={styles.sentRow}>
+                      <LetteredAvatar name={req.receiver?.full_name ?? null} photoUrl={req.receiver?.photo_url} size={avatarSizes.compactRow} />
+                      <View style={styles.headInfo}>
+                        <Text style={typeStyles.cardName}>{req.receiver?.full_name ?? 'Someone'}</Text>
+                        <Text style={[typeStyles.cardTertiary, req.status === 'accepted' && styles.acceptedStatus]}>
+                          {req.type === 'coffee' ? 'Coffee' : 'Connection'} · {req.status}
+                        </Text>
+                      </View>
+                    </View>
+                  </SwipeToDelete>
+                ))
+              )}
+            </>
           )}
         </>
       }
@@ -184,25 +221,42 @@ export default function Requests() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  sectionTitle: { fontSize: 18, fontWeight: '700', padding: 16, paddingBottom: 8 },
-  empty: { paddingHorizontal: 16, paddingBottom: 16, color: '#888', fontSize: 14 },
-  hint: { paddingHorizontal: 16, paddingBottom: 8, color: '#aaa', fontSize: 11 },
-  requestRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderColor: '#eee',
+  container: { flex: 1, backgroundColor: colors.paper },
+  header: { paddingHorizontal: spacing.gutter, paddingTop: 14, paddingBottom: 16 },
+  headline: { ...typeStyles.screenHeadline, marginTop: 8, marginBottom: 16 },
+  card: { marginHorizontal: spacing.gutter, marginBottom: 12 },
+  headRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headInfo: { flex: 1, gap: 2 },
+  askedBadge: { backgroundColor: colors.brassChipBg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  askedBadgeText: { fontSize: 11, fontWeight: '600', color: colors.brassChipText },
+  coffeeBadge: { backgroundColor: colors.liveChipBg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
+  coffeeBadgeText: { fontSize: 11, fontWeight: '600', color: colors.liveChipText },
+  divider: { height: 1, backgroundColor: colors.ruleInner, marginVertical: 14 },
+  whyLabel: { marginBottom: 8 },
+  revealLine: { ...typeStyles.matchRationaleChat, marginBottom: 10 },
+  explainer: { fontSize: 12, color: colors.textTertiary, marginBottom: 14, lineHeight: 17 },
+  buttonRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  flex1: { flex: 1 },
+  meetingBlock: {
+    backgroundColor: colors.surfaceSunken,
+    borderWidth: 1,
+    borderColor: colors.ruleInner,
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 12,
+    gap: 4,
   },
-  requestInfo: { marginBottom: 8 },
-  requestName: { fontSize: 16, fontWeight: '600' },
-  requestType: { fontSize: 13, color: '#666', marginTop: 2 },
-  requestMeeting: { fontSize: 13, color: '#a05a2c', marginTop: 2, fontWeight: '600' },
-  requestMessage: { fontSize: 13, color: '#333', marginTop: 4, fontStyle: 'italic' },
-  actions: { flexDirection: 'row', gap: 8 },
-  actionButton: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20 },
-  acceptButton: { backgroundColor: '#111' },
-  acceptText: { color: '#fff', fontSize: 13, fontWeight: '600' },
-  declineButton: { backgroundColor: '#eee' },
-  declineText: { color: '#555', fontSize: 13, fontWeight: '600' },
+  meetingLine: { fontSize: 13.5, color: colors.textSecondary },
+  messageQuote: { fontSize: 14, color: colors.ink, fontStyle: 'italic', marginTop: 12 },
+  empty: { paddingHorizontal: spacing.gutter, paddingBottom: 16, color: colors.textMuted, fontSize: 14 },
+  hint: { paddingHorizontal: spacing.gutter, paddingBottom: 12, color: colors.textMuted, fontSize: 11 },
+  sentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: spacing.gutter,
+    paddingVertical: 10,
+    backgroundColor: colors.paper,
+  },
+  acceptedStatus: { color: colors.liveChipText, fontWeight: '600' },
 });

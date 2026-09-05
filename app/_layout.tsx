@@ -3,11 +3,14 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, Image, Text, StyleSheet } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
+import { useFonts, Newsreader_400Regular } from '@expo-google-fonts/newsreader';
+import { YesevaOne_400Regular } from '@expo-google-fonts/yeseva-one';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../lib/auth';
 import { RequestsBadgeProvider } from '../lib/requestsBadge';
 import { MessagesBadgeProvider } from '../lib/messagesBadge';
+import { colors, typeStyles } from '../lib/theme';
 
 // The native launch screen (see app.json's expo-splash-screen config) is just a static image —
 // it can't show the "Proxiland" wordmark without baking a new image into a native rebuild. So
@@ -27,7 +30,8 @@ function BrandedSplash() {
   return (
     <View style={styles.splash}>
       <Image source={require('../assets/icon.png')} style={styles.splashLogo} />
-      <Text style={styles.splashWordmark}>PROXILAND</Text>
+      <Text style={styles.splashWordmark}>Proxiland</Text>
+      <Text style={styles.splashTagline}>Bringing people around you closer</Text>
     </View>
   );
 }
@@ -37,9 +41,10 @@ function RootNavigation() {
   const segments = useSegments();
   const router = useRouter();
   const [showBrandedSplash, setShowBrandedSplash] = useState(true);
+  const [fontsLoaded] = useFonts({ Newsreader_400Regular, YesevaOne_400Regular });
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || !fontsLoaded) return;
 
     const remaining = Math.max(0, MIN_SPLASH_MS - (Date.now() - APP_START_TIME));
     const timer = setTimeout(() => {
@@ -59,7 +64,7 @@ function RootNavigation() {
     }, remaining);
 
     return () => clearTimeout(timer);
-  }, [session, isLoading, segments, router]);
+  }, [session, isLoading, fontsLoaded, segments, router]);
 
   return (
     <>
@@ -71,18 +76,26 @@ function RootNavigation() {
             header, so nothing had set one until now. */}
         <Stack.Screen name="(tabs)" options={{ title: '', headerBackTitle: '' }} />
         <Stack.Screen name="edit-profile" />
-        <Stack.Screen name="profile/[id]" options={{ headerShown: true, title: 'Profile' }} />
+        {/* headerShown: false — the screen renders its own back/menu header, per the visual
+            redesign. */}
+        <Stack.Screen name="profile/[id]" options={{ headerShown: false }} />
         <Stack.Screen
           name="blocked-users"
           options={{ headerShown: true, title: 'Blocked Users' }}
         />
-        <Stack.Screen name="chat/[connectionId]" options={{ headerShown: true, title: 'Chat' }} />
+        {/* headerShown: false — the screen renders its own custom header (avatar + name +
+            role + block/report menu), per the visual redesign. */}
+        <Stack.Screen name="chat/[connectionId]" options={{ headerShown: false }} />
         <Stack.Screen name="delete-account" options={{ headerShown: true, title: 'Delete Account' }} />
-        <Stack.Screen name="event-join/[token]" options={{ headerShown: true, title: 'Event' }} />
-        <Stack.Screen name="scan-event" options={{ headerShown: true, title: 'Scan QR Code' }} />
-        <Stack.Screen name="event/[id]/index" options={{ headerShown: true, title: 'Event' }} />
+        <Stack.Screen name="settings" options={{ headerShown: true, title: 'Settings' }} />
+        <Stack.Screen name="event-join/[token]" options={{ headerShown: false }} />
+        {/* headerShown: false — the screen renders its own close button over the camera
+            view, per the visual redesign. */}
+        <Stack.Screen name="scan-event" options={{ headerShown: false }} />
+        {/* headerShown: false — the screen renders its own full-bleed brand-colored header
+            with a custom back chevron and menu, per the visual redesign. */}
+        <Stack.Screen name="event/[id]/index" options={{ headerShown: false }} />
         <Stack.Screen name="event/[id]/intent" options={{ headerShown: true, title: 'Your Intent' }} />
-        <Stack.Screen name="event/[id]/attendees" options={{ headerShown: true, title: 'All Attendees' }} />
       </Stack>
       {showBrandedSplash ? <BrandedSplash /> : null}
     </>
@@ -113,10 +126,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#4A3B31',
+    backgroundColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  splashLogo: { width: 120, height: 120, borderRadius: 24, marginBottom: 20 },
-  splashWordmark: { color: '#F5EFE6', fontSize: 22, fontWeight: '700', letterSpacing: 4 },
+  splashLogo: { width: 76, height: 76, borderRadius: 20, marginBottom: 28 },
+  splashWordmark: { ...typeStyles.wordmark, color: colors.inkOn },
+  splashTagline: { ...typeStyles.tagline, marginTop: 18, textTransform: 'none' },
 });

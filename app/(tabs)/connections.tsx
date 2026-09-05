@@ -1,16 +1,19 @@
-import { useCallback, useState } from 'react';
-import { View, FlatList, Text, Pressable, StyleSheet, RefreshControl, Alert } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { View, FlatList, Text, Pressable, TextInput, StyleSheet, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ProfileCard } from '../../components/ProfileCard';
+import { LetteredAvatar } from '../../components/LetteredAvatar';
+import { SectionLabel } from '../../components/SectionLabel';
 import { getMyConnections } from '../../lib/api/connections';
 import { getUnreadCountsByConnection } from '../../lib/api/messages';
+import { colors, avatarSizes, typeStyles, spacing } from '../../lib/theme';
 import type { Connection } from '../../lib/types';
 
 export default function Connections() {
   const router = useRouter();
   const [connections, setConnections] = useState<Connection[]>([]);
   const [unreadByConnection, setUnreadByConnection] = useState<Map<string, number>>(new Map());
+  const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const load = useCallback(async () => {
@@ -32,67 +35,138 @@ export default function Connections() {
     }, [load])
   );
 
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const withOther = connections.filter((c) => c.other);
+    if (!q) return withOther;
+    return withOther.filter((c) => c.other!.full_name.toLowerCase().includes(q));
+  }, [connections, search]);
+
+  const unread = filtered.filter((c) => (unreadByConnection.get(c.id) ?? 0) > 0);
+  const read = filtered.filter((c) => (unreadByConnection.get(c.id) ?? 0) === 0);
+
+  function renderRow(item: Connection) {
+    const other = item.other!;
+    const unreadCount = unreadByConnection.get(item.id) ?? 0;
+    const isUnread = unreadCount > 0;
+    // Preview line: this app doesn't fetch the latest message body per connection today (a
+    // real "last message preview" needs a new query, out of scope for a presentation-layer
+    // pass) — headline stands in as the subtitle until that exists.
+    const preview = other.headline ?? 'Say hi — no messages yet';
+
+    return (
+      <Pressable key={item.id} style={styles.row} onPress={() => router.push(`/chat/${item.id}`)}>
+        <Pressable onPress={() => router.push(`/profile/${other.id}`)}>
+          <View>
+            <LetteredAvatar name={other.full_name} photoUrl={other.photo_url} size={avatarSizes.messageRow} />
+            {isUnread ? <View style={styles.unreadRing} /> : null}
+          </View>
+        </Pressable>
+        <View style={styles.info}>
+          <View style={styles.nameRow}>
+            <Text style={[styles.name, isUnread && styles.nameUnread]} numberOfLines={1}>
+              {other.full_name}
+            </Text>
+          </View>
+          <Text style={[styles.preview, isUnread && styles.previewUnread]} numberOfLines={1}>
+            {isUnread ? `${unreadCount} new · ` : ''}
+            {preview}
+          </Text>
+        </View>
+      </Pressable>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <FlatList
-        data={connections}
-        keyExtractor={(item) => item.id}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={load} />}
-        ListEmptyComponent={
-          !isLoading ? <Text style={styles.empty}>No connections yet.</Text> : null
-        }
-        renderItem={({ item }) => {
-          if (!item.other) return null;
-          const unreadCount = unreadByConnection.get(item.id) ?? 0;
-          return (
-            <View style={styles.row}>
-              <View style={styles.cardWrap}>
-                <ProfileCard
-                  name={item.other.full_name}
-                  headline={item.other.headline}
-                  employer={item.other.employer}
-                  title={item.other.title}
-                  undergradSchool={item.other.undergrad_school}
-                  undergradYear={item.other.undergrad_year}
-                  gradSchool={item.other.grad_school}
-                  gradYear={item.other.grad_year}
-                  photoUrl={item.other.photo_url}
-                  onPress={() => router.push(`/profile/${item.other!.id}`)}
+        data={[]}
+        renderItem={null}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={load} tintColor={colors.brand} />}
+        ListHeaderComponent={
+          <>
+            <View style={styles.header}>
+              <SectionLabel tone="brass">People</SectionLabel>
+              <Text style={styles.headline}>
+                {connections.length > 0
+                  ? `${connections.length} ${connections.length === 1 ? 'connection' : 'connections'}`
+                  : 'No connections yet'}
+              </Text>
+              <View style={styles.searchField}>
+                <Ionicons name="search" size={15} color={colors.textMuted} />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search name"
+                  placeholderTextColor={colors.textMuted}
+                  value={search}
+                  onChangeText={setSearch}
                 />
               </View>
-              <Pressable style={styles.chatButton} onPress={() => router.push(`/chat/${item.id}`)}>
-                <Ionicons name="chatbubble-outline" size={20} color="#111" />
-                {unreadCount > 0 ? (
-                  <View style={styles.unreadDot}>
-                    <Text style={styles.unreadDotText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-                  </View>
-                ) : null}
-              </Pressable>
             </View>
-          );
-        }}
+
+            {filtered.length === 0 && !isLoading ? <Text style={styles.empty}>No connections yet.</Text> : null}
+
+            {unread.length > 0 ? (
+              <>
+                <SectionLabel tone="brass" style={styles.groupLabel}>Unread</SectionLabel>
+                {unread.map(renderRow)}
+              </>
+            ) : null}
+            {read.length > 0 ? (
+              <>
+                <SectionLabel style={styles.groupLabel}>Earlier</SectionLabel>
+                {read.map(renderRow)}
+              </>
+            ) : null}
+          </>
+        }
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  empty: { padding: 24, textAlign: 'center', color: '#888', fontSize: 14 },
-  row: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderColor: '#eee' },
-  cardWrap: { flex: 1 },
-  chatButton: { paddingHorizontal: 16 },
-  unreadDot: {
-    position: 'absolute',
-    top: -2,
-    right: 10,
-    backgroundColor: '#cc3333',
-    borderRadius: 9,
-    minWidth: 18,
-    height: 18,
-    paddingHorizontal: 4,
+  container: { flex: 1, backgroundColor: colors.paper },
+  header: { paddingHorizontal: spacing.gutter, paddingTop: 14, paddingBottom: 8 },
+  headline: { ...typeStyles.screenHeadline, marginTop: 8, marginBottom: 14 },
+  searchField: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.rule,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
   },
-  unreadDotText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+  searchInput: { flex: 1, fontSize: 14, color: colors.ink },
+  groupLabel: { marginHorizontal: spacing.gutter, marginTop: 18, marginBottom: 8 },
+  empty: { padding: 24, textAlign: 'center', color: colors.textMuted, fontSize: 14 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: spacing.gutter,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderColor: colors.ruleInner,
+  },
+  unreadRing: {
+    position: 'absolute',
+    bottom: -1,
+    right: -1,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: colors.brass,
+    borderWidth: 2,
+    borderColor: colors.paper,
+  },
+  info: { flex: 1, gap: 2 },
+  nameRow: { flexDirection: 'row', alignItems: 'center' },
+  name: { fontSize: 16, fontWeight: '600', color: colors.ink },
+  nameUnread: { fontWeight: '700' },
+  preview: { fontSize: 13.5, color: colors.textTertiary },
+  previewUnread: { color: colors.ink, fontWeight: '500' },
 });

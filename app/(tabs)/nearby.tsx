@@ -1,5 +1,4 @@
-// Spec v4: anonymized-card feed. Section 7's wording is applied at the source
-// (individual_cards_for_scope already returns distance bands as text, not meters).
+// "Warm Ledger" redesign — see design_handoff_visual_system/README.md screen 2.
 // People you're already connected to show as their real profile instead of an anon card —
 // there's no anonymity left to protect once you're actually connected, and re-anonymizing
 // someone you already know would just be confusing.
@@ -8,11 +7,16 @@ import { View, FlatList, Text, Pressable, StyleSheet, RefreshControl, Alert } fr
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { AnonCard } from '../../components/AnonCard';
-import { ProfileCard } from '../../components/ProfileCard';
+import { NearbyIdentityCard } from '../../components/NearbyIdentityCard';
+import { Card } from '../../components/Card';
+import { LetteredAvatar } from '../../components/LetteredAvatar';
+import { PrimaryButton } from '../../components/Buttons';
+import { SectionLabel } from '../../components/SectionLabel';
 import { VisibilityToggle } from '../../components/VisibilityToggle';
 import { getMyActiveVisibility } from '../../lib/api/visibility';
 import { getMyConnections } from '../../lib/api/connections';
 import { getCurrentCoords } from '../../lib/location';
+import { colors, avatarSizes, typeStyles, spacing, radii } from '../../lib/theme';
 import {
   getOrCreateGeoScope,
   getAggregateView,
@@ -39,21 +43,35 @@ import { sendRequest, getOutgoingPendingConnectTargetIds } from '../../lib/api/r
 import { useAuth } from '../../lib/auth';
 import type { Connection } from '../../lib/types';
 
+function timeRemainingShort(expiresAt: string): string {
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  if (ms <= 0) return '0m';
+  const minutes = Math.round(ms / 60000);
+  if (minutes < 60) return `${minutes}m`;
+  return `${Math.round(minutes / 60)}h`;
+}
+
+type ListItem =
+  | { kind: 'header'; key: string; label: string; count: number }
+  | { kind: 'connected'; key: string; connection: Connection }
+  | { kind: 'incomingReveal'; key: string; reveal: IncomingRevealRequest }
+  | { kind: 'identity'; key: string; card: FeedCardV2 }
+  | { kind: 'anon'; key: string; card: FeedCardV2 };
+
 export default function Nearby() {
   const router = useRouter();
   const { hasProfile, isDemo } = useAuth();
-  const [isVisible, setIsVisible] = useState(false);
+  const [visibilityExpiresAt, setVisibilityExpiresAt] = useState<string | null>(null);
+  const [visibilitySheetOpen, setVisibilitySheetOpen] = useState(false);
   const [aggregate, setAggregate] = useState<AggregateView | null>(null);
-  const [cards, setCards] = useState<FeedCardV2[]>([]);
-  const [connectionByUserId, setConnectionByUserId] = useState<Map<string, Connection>>(new Map());
+  const [connections, setConnections] = useState<Connection[]>([]);
+  const [incomingReveals, setIncomingReveals] = useState<IncomingRevealRequest[]>([]);
+  const [anonCards, setAnonCards] = useState<FeedCardV2[]>([]);
+  const [identityCards, setIdentityCards] = useState<FeedCardV2[]>([]);
   const [askedTargetIds, setAskedTargetIds] = useState<Set<string>>(new Set());
   const [connectRequestedIds, setConnectRequestedIds] = useState<Set<string>>(new Set());
-  const [incomingRevealByRequesterId, setIncomingRevealByRequesterId] = useState<
-    Map<string, IncomingRevealRequest>
-  >(new Map());
   const [overlapByUserId, setOverlapByUserId] = useState<Map<string, Overlap>>(new Map());
   const [isLoading, setIsLoading] = useState(false);
-  const [scopeId, setScopeId] = useState<string | null>(null);
   const [isRevealingBack, setIsRevealingBack] = useState<string | null>(null);
   const [nearbyEvents, setNearbyEvents] = useState<EventSummary[]>([]);
   const [myActiveEvents, setMyActiveEvents] = useState<EventSummary[]>([]);
@@ -63,18 +81,18 @@ export default function Nearby() {
     setIsLoading(true);
     try {
       const activeVisibility = await getMyActiveVisibility();
-      setIsVisible(!!activeVisibility);
+      setVisibilityExpiresAt(activeVisibility?.expiresAt ?? null);
 
-      const [connections, incomingReveals] = await Promise.all([
+      const [connectionsList, incomingRevealsList] = await Promise.all([
         getMyConnections(),
         getIncomingRevealRequests(),
       ]);
-      const connectionMap = new Map(connections.map((c) => [c.other!.id, c]));
+      const connectionMap = new Map(connectionsList.map((c) => [c.other!.id, c]));
       const incomingRevealMap = new Map(
-        incomingReveals.filter((r) => r.requester).map((r) => [r.requester!.id, r])
+        incomingRevealsList.filter((r) => r.requester).map((r) => [r.requester!.id, r])
       );
-      setConnectionByUserId(connectionMap);
-      setIncomingRevealByRequesterId(incomingRevealMap);
+      setConnections(connectionsList);
+      setIncomingReveals(incomingRevealsList);
 
       // Doesn't need location, so this loads regardless of visibility — someone who joined an
       // event by QR should still see it here even with visibility off.
@@ -84,14 +102,13 @@ export default function Nearby() {
 
       if (!activeVisibility) {
         setAggregate(null);
-        setCards([]);
-        setScopeId(null);
+        setAnonCards([]);
+        setIdentityCards([]);
         setNearbyEvents([]);
         return;
       }
 
       const id = await getOrCreateGeoScope();
-      setScopeId(id);
 
       // Best-effort — a failed event lookup shouldn't block the regular Nearby feed.
       getCurrentCoords()
@@ -99,7 +116,7 @@ export default function Nearby() {
         .then(setNearbyEvents)
         .catch(() => setNearbyEvents([]));
 
-      const [aggregateView, feedCards, askedIds, connectRequestedIds] = await Promise.all([
+      const [aggregateView, feedCards, askedIds, connectRequestedIdSet] = await Promise.all([
         getAggregateView(id),
         getFeedCardsV2(id),
         getOutgoingPendingTargetIds(),
@@ -108,28 +125,27 @@ export default function Nearby() {
 
       setAggregate(aggregateView);
       setAskedTargetIds(askedIds);
-      setConnectRequestedIds(connectRequestedIds);
+      setConnectRequestedIds(connectRequestedIdSet);
 
-      // Only rank/show "why you two" for people who'll actually render as an anonymous
-      // stranger card — someone already connected or already mid-reveal shows their real
-      // profile instead and belongs at the top regardless, so there's no reason to spend an
-      // AI call ranking them against strangers.
+      // Only rank/show "why you two" for people who'll actually render as a stranger card —
+      // someone already connected or already mid-reveal shows their real profile instead and
+      // keeps its own priority position, so there's no reason to spend an AI call ranking
+      // them against strangers.
       const strangerCards = feedCards.filter(
         (c) => !connectionMap.has(c.user_id) && !incomingRevealMap.has(c.user_id)
-      );
-      const priorityCards = feedCards.filter(
-        (c) => connectionMap.has(c.user_id) || incomingRevealMap.has(c.user_id)
       );
 
       const overlaps = await Promise.all(
         strangerCards.map((c) => fetchOverlap(c.user_id).catch(() => null))
       );
-      const rankedStrangers = strangerCards
-        .map((c, i) => ({ card: c, overlap: overlaps[i] }))
-        .sort((a, b) => (b.overlap?.strength ?? 0) - (a.overlap?.strength ?? 0));
+      const overlapMap = new Map(strangerCards.map((c, i) => [c.user_id, overlaps[i]]));
+      setOverlapByUserId(overlapMap);
 
-      setOverlapByUserId(new Map(rankedStrangers.map(({ card, overlap }) => [card.user_id, overlap])));
-      setCards([...priorityCards, ...rankedStrangers.map((r) => r.card)]);
+      const rankByOverlap = (a: FeedCardV2, b: FeedCardV2) =>
+        (overlapMap.get(b.user_id)?.strength ?? 0) - (overlapMap.get(a.user_id)?.strength ?? 0);
+
+      setAnonCards(strangerCards.filter((c) => c.identity_visibility === 'anonymous').sort(rankByOverlap));
+      setIdentityCards(strangerCards.filter((c) => c.identity_visibility === 'full').sort(rankByOverlap));
     } catch {
       // Location permission not granted yet, or scope creation failed — leave feed empty.
     } finally {
@@ -157,16 +173,13 @@ export default function Nearby() {
     setIsRevealingBack(requestId);
     try {
       await revealRequest(requestId);
-      setIncomingRevealByRequesterId((prev) => {
-        const next = new Map(prev);
-        next.delete(requesterUserId);
-        return next;
-      });
+      setIncomingReveals((prev) => prev.filter((r) => r.id !== requestId));
       await load();
     } catch (error: any) {
       Alert.alert('Could not share your profile', error.message ?? String(error));
     } finally {
       setIsRevealingBack(null);
+      void requesterUserId;
     }
   }
 
@@ -208,6 +221,7 @@ export default function Nearby() {
     );
   }
 
+  const isVisible = !!visibilityExpiresAt;
   const peopleNearby = aggregate?.total_count ?? 0;
   // Treat "still checking" the same as "not done" — avoids a flash of enabled buttons
   // before the app knows for sure.
@@ -215,53 +229,80 @@ export default function Nearby() {
   const joinedEventIds = new Set(myActiveEvents.map((e) => e.id));
   const joinableNearbyEvents = nearbyEvents.filter((e) => !joinedEventIds.has(e.id));
 
+  const identityGroup: ListItem[] = [
+    ...connections.filter((c) => c.other).map((c) => ({ kind: 'connected' as const, key: `c-${c.id}`, connection: c })),
+    ...incomingReveals
+      .filter((r) => r.requester)
+      .map((r) => ({ kind: 'incomingReveal' as const, key: `r-${r.id}`, reveal: r })),
+    ...identityCards.map((c) => ({ kind: 'identity' as const, key: `i-${c.user_id}`, card: c })),
+  ];
+  const listData: ListItem[] = [
+    ...(anonCards.length > 0
+      ? [{ kind: 'header' as const, key: 'h-anon', label: 'Anonymous', count: anonCards.length }]
+      : []),
+    ...anonCards.map((c) => ({ kind: 'anon' as const, key: `a-${c.user_id}`, card: c })),
+    ...(identityGroup.length > 0
+      ? [{ kind: 'header' as const, key: 'h-identity', label: 'Showing full identity', count: identityGroup.length }]
+      : []),
+    ...identityGroup,
+  ];
+
   return (
     <View style={styles.container}>
-      <VisibilityToggle onChange={load} />
-
       <View style={styles.header}>
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>Who's working nearby</Text>
+        <View style={styles.topRow}>
+          <SectionLabel tone="brass">Nearby</SectionLabel>
+          <View style={styles.spacer} />
           {isDemo ? (
             <View style={styles.demoPill}>
               <Text style={styles.demoPillText}>Demo mode</Text>
             </View>
           ) : null}
+          <Pressable style={styles.visibilityPill} onPress={() => setVisibilitySheetOpen(true)}>
+            {isVisible ? <View style={styles.liveDot} /> : null}
+            <Text style={styles.visibilityPillText}>
+              {isVisible ? `Visible · ${timeRemainingShort(visibilityExpiresAt!)}` : 'Not visible'}
+            </Text>
+          </Pressable>
           <Pressable style={styles.scanButton} onPress={() => router.push('/scan-event')}>
-            <Ionicons name="qr-code-outline" size={20} color="#4A3B31" />
+            <Ionicons name="qr-code-outline" size={18} color={colors.inkOn} />
           </Pressable>
         </View>
-        {myActiveEvents.length > 0 ? (
-          <View style={styles.eventPillRow}>
-            {myActiveEvents.map((e) => (
-              <Pressable key={e.id} style={styles.eventPill} onPress={() => router.push(`/event/${e.id}`)}>
-                <Ionicons name="people" size={13} color="#3b5bdb" />
-                <Text style={styles.eventPillText}>{e.name}</Text>
-              </Pressable>
-            ))}
-          </View>
-        ) : null}
+
+        <Text style={styles.headline}>
+          {peopleNearby > 0
+            ? `${peopleNearby} ${peopleNearby === 1 ? 'person is' : 'people are'} working near you`
+            : "Who's working nearby"}
+        </Text>
+
+        {myActiveEvents.map((e) => (
+          <Pressable key={e.id} style={styles.eventBanner} onPress={() => router.push(`/event/${e.id}`)}>
+            <Ionicons name="people" size={17} color={colors.brassOnDark} />
+            <View style={styles.eventBannerText}>
+              <Text style={styles.eventBannerTitle}>{e.name}</Text>
+              <Text style={styles.eventBannerSubtitle}>You're in</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="rgba(245,239,230,.6)" />
+          </Pressable>
+        ))}
+
         {joinableNearbyEvents.map((e) => (
           <Pressable
             key={e.id}
-            style={styles.eventJoinBanner}
+            style={styles.eventBanner}
             onPress={() => handleJoinEvent(e)}
             disabled={isJoiningEventId === e.id}
           >
-            <Text style={styles.eventJoinBannerTitle}>You're at {e.name}</Text>
-            <Text style={styles.eventJoinBannerAction}>
-              {isJoiningEventId === e.id ? 'Joining…' : 'Tap to join and see who else is here'}
-            </Text>
+            <Ionicons name="people" size={17} color={colors.brassOnDark} />
+            <View style={styles.eventBannerText}>
+              <Text style={styles.eventBannerTitle}>You're at {e.name}</Text>
+              <Text style={styles.eventBannerSubtitle}>
+                {isJoiningEventId === e.id ? 'Joining…' : 'Tap to join and see who else is here'}
+              </Text>
+            </View>
           </Pressable>
         ))}
-        {isVisible ? (
-          <View style={styles.statusRow}>
-            <View style={styles.dot} />
-            <Text style={styles.statusText}>
-              {peopleNearby} {peopleNearby === 1 ? 'person' : 'people'} nearby
-            </Text>
-          </View>
-        ) : null}
+
         {profileIncomplete ? (
           <Pressable style={styles.incompleteBanner} onPress={() => router.push('/edit-profile')}>
             <Text style={styles.incompleteBannerText}>
@@ -272,8 +313,8 @@ export default function Nearby() {
       </View>
 
       <FlatList
-        data={cards}
-        keyExtractor={(item) => item.user_id}
+        data={listData}
+        keyExtractor={(item) => item.key}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={load} />}
         ListEmptyComponent={
           !isLoading ? (
@@ -285,184 +326,157 @@ export default function Nearby() {
           ) : null
         }
         renderItem={({ item }) => {
-          const connection = connectionByUserId.get(item.user_id);
-          if (connection?.other) {
+          if (item.kind === 'header') {
             return (
-              <View style={styles.connectedWrap}>
-                <ProfileCard
-                  name={connection.other.full_name}
-                  headline={connection.other.headline}
-                  employer={connection.other.employer}
-                  title={connection.other.title}
-                  undergradSchool={connection.other.undergrad_school}
-                  undergradYear={connection.other.undergrad_year}
-                  gradSchool={connection.other.grad_school}
-                  gradYear={connection.other.grad_year}
-                  photoUrl={connection.other.photo_url}
-                  onPress={() => router.push(`/chat/${connection.id}`)}
-                  onPhotoPress={() => router.push(`/profile/${connection.other!.id}`)}
-                />
-                <Text style={styles.connectedHint}>You're connected — tap to message</Text>
-              </View>
+              <SectionLabel tone={item.label === 'Anonymous' ? 'muted' : 'brass'} style={styles.sectionHeader}>
+                {item.label} · {item.count}
+              </SectionLabel>
             );
           }
 
-          // They've already asked to connect with me — per the reveal design, the moment
-          // someone asks, their real identity is shown to the person being asked (see
-          // migration 0027's note on why this is safe before any mutual connection exists).
-          // Showing that here too, not just buried in the Requests tab, so it's obvious who's
-          // asked without having to go find out.
-          const incomingReveal = incomingRevealByRequesterId.get(item.user_id);
-          if (incomingReveal?.requester) {
-            const requester = incomingReveal.requester;
+          if (item.kind === 'connected') {
+            const other = item.connection.other!;
             return (
-              <View style={styles.connectedWrap}>
-                <ProfileCard
-                  name={requester.full_name}
-                  headline={requester.headline}
-                  employer={requester.employer}
-                  title={requester.title}
-                  undergradSchool={requester.undergrad_school}
-                  undergradYear={requester.undergrad_year}
-                  gradSchool={requester.grad_school}
-                  gradYear={requester.grad_year}
-                  photoUrl={requester.photo_url}
-                />
-                <Text style={styles.wantsToConnectHint}>Wants to connect</Text>
-                <Pressable
-                  style={[styles.shareBackButton, isRevealingBack === incomingReveal.id && styles.buttonDisabled]}
-                  onPress={() => handleRevealBack(incomingReveal.id, item.user_id)}
-                  disabled={isRevealingBack === incomingReveal.id}
-                >
-                  <Text style={styles.shareBackButtonText}>
-                    {isRevealingBack === incomingReveal.id ? 'Sharing…' : 'Share my profile back'}
-                  </Text>
-                </Pressable>
-              </View>
+              <NearbyIdentityCard
+                name={other.full_name}
+                headline={other.headline}
+                employer={other.employer}
+                title={other.title}
+                undergradSchool={other.undergrad_school}
+                undergradYear={other.undergrad_year}
+                gradSchool={other.grad_school}
+                gradYear={other.grad_year}
+                photoUrl={other.photo_url}
+                status="connected"
+                onPress={() => router.push(`/chat/${item.connection.id}`)}
+                onPhotoPress={() => router.push(`/profile/${other.id}`)}
+                onConnect={() => {}}
+              />
             );
           }
 
-          // Full-identity opt-in (migration 0056) — this person has chosen to be shown fully
-          // rather than anonymized, so there's no card to expand and no reveal step; a plain
-          // profile card with a normal connect request is the right shape, same as an event
-          // attendee.
-          if (item.identity_visibility === 'full') {
-            const requested = connectRequestedIds.has(item.user_id);
+          if (item.kind === 'incomingReveal') {
+            const requester = item.reveal.requester!;
+            const revealing = isRevealingBack === item.reveal.id;
             return (
-              <View style={styles.connectedWrap}>
-                <ProfileCard
-                  name={item.full_name ?? 'Someone nearby'}
-                  headline={item.headline}
-                  employer={item.employer}
-                  title={item.title}
-                  undergradSchool={item.undergrad_school}
-                  undergradYear={item.undergrad_year}
-                  gradSchool={item.grad_school}
-                  gradYear={item.grad_year}
-                  photoUrl={item.photo_url}
-                  onPress={() => router.push(`/profile/${item.user_id}`)}
+              <Card style={styles.wantsCard}>
+                <View style={styles.wantsRow}>
+                  <LetteredAvatar name={requester.full_name} photoUrl={requester.photo_url} size={avatarSizes.matchCard} />
+                  <View style={styles.wantsInfo}>
+                    <Text style={typeStyles.cardName}>{requester.full_name}</Text>
+                    {requester.headline ? <Text style={typeStyles.cardSubtitle}>{requester.headline}</Text> : null}
+                  </View>
+                </View>
+                <SectionLabel tone="brass" style={styles.wantsLabel}>Wants to connect</SectionLabel>
+                <PrimaryButton
+                  label={revealing ? 'Sharing…' : 'Share my profile back'}
+                  loading={revealing}
+                  onPress={() => handleRevealBack(item.reveal.id, requester.id)}
                 />
-                {item.overlap_phrase ? <Text style={styles.wantsToConnectHint}>{item.overlap_phrase}</Text> : null}
-                <Pressable
-                  style={[styles.connectPill, requested && styles.buttonDisabled]}
-                  onPress={() => handleConnect(item.user_id)}
-                  disabled={requested}
-                >
-                  <Text style={styles.connectPillText}>{requested ? 'Requested' : 'Connect'}</Text>
-                </Pressable>
-              </View>
+              </Card>
+            );
+          }
+
+          if (item.kind === 'identity') {
+            const c = item.card;
+            const requested = connectRequestedIds.has(c.user_id);
+            return (
+              <NearbyIdentityCard
+                name={c.full_name ?? 'Someone nearby'}
+                headline={c.headline}
+                employer={c.employer}
+                title={c.title}
+                undergradSchool={c.undergrad_school}
+                undergradYear={c.undergrad_year}
+                gradSchool={c.grad_school}
+                gradYear={c.grad_year}
+                photoUrl={c.photo_url}
+                reason={c.overlap_phrase}
+                status={requested ? 'requested' : 'none'}
+                onPress={() => router.push(`/profile/${c.user_id}`)}
+                onConnect={() => handleConnect(c.user_id)}
+              />
             );
           }
 
           return (
             <AnonCard
-              card={{ ...item, line: item.line ?? '', used_generic: item.used_generic ?? false }}
-              overlap={overlapByUserId.get(item.user_id) ?? null}
-              alreadyAsked={askedTargetIds.has(item.user_id)}
+              card={{ ...item.card, line: item.card.line ?? '', used_generic: item.card.used_generic ?? false }}
+              overlap={overlapByUserId.get(item.card.user_id) ?? null}
+              alreadyAsked={askedTargetIds.has(item.card.user_id)}
               locked={profileIncomplete}
-              onAskToConnect={(connectionLine) => handleAskToConnect(item.user_id, connectionLine)}
+              onAskToConnect={(connectionLine) => handleAskToConnect(item.card.user_id, connectionLine)}
               onLockedTap={handleLockedTap}
             />
           );
         }}
       />
+
+      <VisibilityToggle visible={visibilitySheetOpen} onClose={() => setVisibilitySheetOpen(false)} onChange={load} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  header: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  title: { fontSize: 22, fontWeight: '700' },
-  demoPill: {
-    backgroundColor: '#3b5bdb',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+  container: { flex: 1, backgroundColor: colors.paper },
+  header: {
+    paddingHorizontal: spacing.gutter,
+    paddingTop: 14,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderColor: colors.rule,
   },
-  demoPillText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  scanButton: { marginLeft: 'auto', padding: 6 },
-  eventPillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
-  eventPill: {
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  spacer: { flex: 1 },
+  demoPill: { backgroundColor: colors.brass, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
+  demoPillText: { color: colors.inkOn, fontSize: 11, fontWeight: '700' },
+  visibilityPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#eef0fb',
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  eventPillText: { color: '#3b5bdb', fontSize: 12, fontWeight: '600' },
-  eventJoinBanner: {
-    backgroundColor: '#eef0fb',
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 10,
+    gap: 6,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: '#c9cff0',
+    borderColor: colors.rule,
+    borderRadius: radii.pill,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
   },
-  eventJoinBannerTitle: { fontSize: 14, fontWeight: '700', color: '#2a3a9c' },
-  eventJoinBannerAction: { fontSize: 12, color: '#3b5bdb', marginTop: 2 },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2ecc71' },
-  statusText: { fontSize: 13, color: '#666' },
+  liveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.live },
+  visibilityPillText: { fontSize: 12, fontWeight: '600', color: colors.ink },
+  scanButton: {
+    width: 34,
+    height: 34,
+    borderRadius: radii.iconButton,
+    backgroundColor: colors.ink,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headline: { ...typeStyles.screenHeadline, marginTop: 14 },
+  eventBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.brand,
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 12,
+  },
+  eventBannerText: { flex: 1 },
+  eventBannerTitle: { fontSize: 13.5, fontWeight: '600', color: colors.inkOn },
+  eventBannerSubtitle: { fontSize: 11.5, color: 'rgba(245,239,230,.6)', marginTop: 1 },
   incompleteBanner: {
-    backgroundColor: '#fdf6ee',
+    backgroundColor: colors.surfaceSunken,
     borderRadius: 10,
     padding: 12,
-    marginTop: 10,
+    marginTop: 12,
     borderWidth: 1,
-    borderColor: '#f0dfc4',
+    borderColor: colors.rule,
   },
-  incompleteBannerText: { fontSize: 12, color: '#a05a2c' },
-  empty: { padding: 24, textAlign: 'center', color: '#888', fontSize: 14 },
-  connectedWrap: { paddingBottom: 4 },
-  connectedHint: { fontSize: 11, color: '#999', paddingHorizontal: 16, paddingBottom: 8 },
-  wantsToConnectHint: {
-    fontSize: 12,
-    color: '#3b5bdb',
-    fontWeight: '600',
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-  },
-  shareBackButton: {
-    backgroundColor: '#111',
-    borderRadius: 20,
-    paddingVertical: 10,
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginBottom: 12,
-  },
-  shareBackButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  connectPill: {
-    backgroundColor: '#4A3B31',
-    borderRadius: 20,
-    paddingVertical: 10,
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginBottom: 12,
-  },
-  connectPillText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  buttonDisabled: { opacity: 0.5 },
+  incompleteBannerText: { fontSize: 12, color: colors.brass },
+  empty: { padding: 24, textAlign: 'center', color: colors.textMuted, fontSize: 14 },
+  sectionHeader: { marginHorizontal: spacing.gutter, marginTop: 22, marginBottom: 10 },
+  wantsCard: { marginHorizontal: spacing.gutter, marginVertical: 6, gap: 12 },
+  wantsRow: { flexDirection: 'row', gap: 12 },
+  wantsInfo: { flex: 1, gap: 2, justifyContent: 'center' },
+  wantsLabel: {},
 });

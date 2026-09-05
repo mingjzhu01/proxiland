@@ -51,6 +51,7 @@ export type EventAttendee = {
   grad_school: string | null;
   grad_year: string | null;
   photo_url: string | null;
+  role_category: string | null;
 };
 
 export async function getEventAttendees(eventId: string): Promise<EventAttendee[]> {

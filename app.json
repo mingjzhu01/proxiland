@@ -2,7 +2,7 @@
   "expo": {
     "name": "Proxiland",
     "slug": "proxiland",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "scheme": "proxiland",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -60,7 +60,8 @@
           "microphonePermission": "Proxiland does not use your microphone.",
           "recordAudioAndroid": false
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "router": {},

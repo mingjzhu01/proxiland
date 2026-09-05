@@ -5,6 +5,7 @@ import { useRequestsBadge } from '../../lib/requestsBadge';
 import { useMessagesBadge } from '../../lib/messagesBadge';
 import { logSessionEvent } from '../../lib/api/instrumentation';
 import { IntentStatePrompt } from '../../components/IntentStatePrompt';
+import { colors } from '../../lib/theme';
 
 export default function TabsLayout() {
   const { pendingCount } = useRequestsBadge();
@@ -17,7 +18,20 @@ export default function TabsLayout() {
   return (
     <>
       <IntentStatePrompt />
-      <Tabs screenOptions={{ tabBarActiveTintColor: '#111' }}>
+      <Tabs
+        screenOptions={{
+          tabBarActiveTintColor: colors.brand,
+          tabBarInactiveTintColor: colors.textMuted,
+          tabBarStyle: {
+            backgroundColor: 'rgba(247,243,236,0.92)',
+            borderTopColor: colors.rule,
+            borderTopWidth: 1,
+            paddingTop: 9,
+          },
+          tabBarLabelStyle: { fontSize: 9.5, fontWeight: '600' },
+          tabBarBadgeStyle: { backgroundColor: colors.brass, color: colors.inkOn },
+        }}
+      >
       <Tabs.Screen
         name="nearby"
         options={{
@@ -45,7 +59,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="connections"
         options={{
-          title: 'Connections',
+          title: 'People',
           tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
           tabBarIcon: ({ color, size }) => <Ionicons name="people" color={color} size={size} />,
         }}
@@ -53,7 +67,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: 'You',
           tabBarIcon: ({ color, size }) => <Ionicons name="person" color={color} size={size} />,
         }}
       />

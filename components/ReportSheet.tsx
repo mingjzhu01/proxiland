@@ -11,6 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { reportUser, blockUser, type ReportContext, type ReportReason } from '../lib/api/connections';
+import { colors, radii } from '../lib/theme';
 
 const REASONS: { value: ReportReason; label: string }[] = [
   { value: 'impersonation', label: 'Impersonation' },
@@ -116,6 +117,7 @@ export function ReportSheet({
               <TextInput
                 style={styles.detailsInput}
                 placeholder="Additional details (optional)"
+                placeholderTextColor={colors.textMuted}
                 value={details}
                 onChangeText={setDetails}
                 multiline
@@ -142,10 +144,10 @@ export function ReportSheet({
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 32 },
-  title: { fontSize: 18, fontWeight: '700', marginBottom: 4 },
-  subtitle: { fontSize: 14, color: '#666', marginBottom: 16 },
+  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(36,28,22,.42)' },
+  sheet: { backgroundColor: colors.paper, borderTopLeftRadius: radii.sheet, borderTopRightRadius: radii.sheet, padding: 20, paddingBottom: 32 },
+  title: { fontSize: 18, fontWeight: '700', color: colors.ink, marginBottom: 4 },
+  subtitle: { fontSize: 14, color: colors.textSecondary, marginBottom: 16 },
   reasonList: { gap: 4, marginBottom: 12 },
   reasonRow: {
     flexDirection: 'row',
@@ -155,35 +157,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     borderRadius: 8,
   },
-  reasonRowSelected: { backgroundColor: '#eef1fd' },
-  radio: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: '#ccc' },
-  radioSelected: { borderColor: '#3b5bdb', backgroundColor: '#3b5bdb' },
-  reasonLabel: { fontSize: 15, color: '#111' },
+  reasonRowSelected: { backgroundColor: colors.surfaceSunken },
+  radio: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: colors.dashedBorder },
+  radioSelected: { borderColor: colors.brand, backgroundColor: colors.brand },
+  reasonLabel: { fontSize: 15, color: colors.ink },
   detailsInput: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.rule,
     borderRadius: 10,
     padding: 12,
     fontSize: 14,
+    color: colors.ink,
+    backgroundColor: colors.surface,
     minHeight: 70,
     textAlignVertical: 'top',
     marginBottom: 16,
   },
   buttonRow: { flexDirection: 'row', gap: 10 },
-  cancelButton: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 20, backgroundColor: '#f0f0f0' },
-  cancelButtonText: { color: '#555', fontSize: 15, fontWeight: '600' },
-  submitButton: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 20, backgroundColor: '#111' },
-  submitButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  cancelButton: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 20, backgroundColor: colors.neutralChipBg },
+  cancelButtonText: { color: colors.textSecondary, fontSize: 15, fontWeight: '600' },
+  submitButton: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 20, backgroundColor: colors.ink },
+  submitButtonText: { color: colors.inkOn, fontSize: 15, fontWeight: '600' },
   buttonDisabled: { opacity: 0.5 },
   blockButton: {
     paddingVertical: 12,
     alignItems: 'center',
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.rule,
     marginBottom: 10,
   },
-  blockButtonText: { color: '#111', fontSize: 15, fontWeight: '600' },
-  doneButton: { paddingVertical: 12, alignItems: 'center', borderRadius: 20, backgroundColor: '#111' },
-  doneButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  blockButtonText: { color: colors.ink, fontSize: 15, fontWeight: '600' },
+  doneButton: { paddingVertical: 12, alignItems: 'center', borderRadius: 20, backgroundColor: colors.ink },
+  doneButtonText: { color: colors.inkOn, fontSize: 15, fontWeight: '600' },
 });

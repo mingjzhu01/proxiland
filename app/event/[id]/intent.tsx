@@ -2,21 +2,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { getMyEventIntent, upsertEventIntent, isIntentComplete, type EventIntent } from '../../../lib/api/events';
+import { getMyEventIntent, upsertEventIntent, isIntentComplete } from '../../../lib/api/events';
 import { IntentOptionPicker } from '../../../components/IntentOptionPicker';
+import { Card } from '../../../components/Card';
+import { Chip } from '../../../components/Chip';
+import { SectionLabel } from '../../../components/SectionLabel';
+import { PrimaryButton } from '../../../components/Buttons';
 import { ASK_OPTION_BY_ID, OFFER_OPTION_BY_ID } from '../../../lib/eventIntentOptions';
+import { EVENT_INTENT_DEFAULTS } from '../../../lib/eventIntentConfig';
 import { logSessionEvent } from '../../../lib/api/instrumentation';
-
-function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
-  return (
-    <View style={styles.chip}>
-      <Text style={styles.chipText}>{label}</Text>
-      <Pressable onPress={onRemove} hitSlop={8}>
-        <Ionicons name="close" size={14} color="#4A3B31" />
-      </Pressable>
-    </View>
-  );
-}
+import { colors, typeStyles, spacing } from '../../../lib/theme';
 
 export default function EventIntent() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -146,62 +141,58 @@ export default function EventIntent() {
   if (isLoading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.brand} />
       </View>
     );
   }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.intro}>
-        This is just for this event — it won't touch your regular profile, and resets once the
-        event ends. Both questions are required so we can find you real matches.
+      <View style={styles.topRow}>
+        <Pressable onPress={handleCancel} hitSlop={10}>
+          <Ionicons name="close" size={22} color={colors.textTertiary} />
+        </Pressable>
+        <View style={styles.spacer} />
+        <SectionLabel tone="brass">Step 1 of 1</SectionLabel>
+      </View>
+
+      <Text style={styles.headline}>What would make tonight worth it?</Text>
+      <Text style={styles.subhead}>
+        Only for this event. It resets when the event ends and never touches your profile.
       </Text>
 
-      <Text style={styles.label}>What are you looking for here?</Text>
-      <View style={styles.chipRow}>
-        {askIds.map((optionId) => (
-          <Chip key={optionId} label={ASK_OPTION_BY_ID[optionId]?.label ?? optionId} onRemove={() => removeAsk(optionId)} />
-        ))}
-      </View>
-      <Pressable style={styles.chooseButton} onPress={() => setAskPickerOpen(true)}>
-        <Text style={styles.chooseButtonText}>{askIds.length > 0 ? 'Edit selections' : 'Choose up to 3'}</Text>
-      </Pressable>
-      {askNeedsDetail ? <Text style={styles.errorText}>Add a few words for "Other".</Text> : null}
-      <Text style={styles.helper}>Add optional details to improve your matches</Text>
-      <TextInput
-        style={styles.input}
-        value={askDetail}
-        onChangeText={setAskDetail}
-        placeholder="e.g. Intros to seed investors in climate tech"
-        multiline
+      <IntentCard
+        label="I'm asking for"
+        selectedIds={askIds}
+        optionMap={ASK_OPTION_BY_ID}
+        max={EVENT_INTENT_DEFAULTS.maximumAskSelections}
+        onRemove={removeAsk}
+        onOpenPicker={() => setAskPickerOpen(true)}
+        needsDetail={askNeedsDetail}
+        detailValue={askDetail}
+        onDetailChange={setAskDetail}
+        detailPlaceholder="e.g. Intros to seed investors in climate tech"
       />
 
-      <Text style={[styles.label, styles.secondLabel]}>What can you offer?</Text>
-      <View style={styles.chipRow}>
-        {offerIds.map((optionId) => (
-          <Chip key={optionId} label={OFFER_OPTION_BY_ID[optionId]?.label ?? optionId} onRemove={() => removeOffer(optionId)} />
-        ))}
-      </View>
-      <Pressable style={styles.chooseButton} onPress={() => setOfferPickerOpen(true)}>
-        <Text style={styles.chooseButtonText}>{offerIds.length > 0 ? 'Edit selections' : 'Choose up to 3'}</Text>
-      </Pressable>
-      {offerNeedsDetail ? <Text style={styles.errorText}>Add a few words for "Other".</Text> : null}
-      <Text style={styles.helper}>Add optional details to improve your matches</Text>
-      <TextInput
-        style={styles.input}
-        value={offerDetail}
-        onChangeText={setOfferDetail}
-        placeholder="e.g. Hands-on experience scaling a marketplace to Series A"
-        multiline
+      <IntentCard
+        label="I can offer"
+        selectedIds={offerIds}
+        optionMap={OFFER_OPTION_BY_ID}
+        max={EVENT_INTENT_DEFAULTS.maximumOfferSelections}
+        onRemove={removeOffer}
+        onOpenPicker={() => setOfferPickerOpen(true)}
+        needsDetail={offerNeedsDetail}
+        detailValue={offerDetail}
+        onDetailChange={setOfferDetail}
+        detailPlaceholder="e.g. Hands-on experience scaling a marketplace to Series A"
       />
 
-      <Pressable style={[styles.saveButton, (!canSave || isSaving) && styles.buttonDisabled]} onPress={handleSave} disabled={!canSave || isSaving}>
-        {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveButtonText}>Save</Text>}
-      </Pressable>
-      <Pressable style={styles.cancelButton} onPress={handleCancel} disabled={isSaving}>
-        <Text style={styles.cancelButtonText}>{wasCompleteOnLoad ? 'Cancel' : 'Not now'}</Text>
-      </Pressable>
+      <View style={styles.footer}>
+        <PrimaryButton label="Find my matches" loading={isSaving} disabled={!canSave} onPress={handleSave} />
+        <Pressable style={styles.notNowButton} onPress={handleCancel} disabled={isSaving}>
+          <Text style={styles.notNowText}>{wasCompleteOnLoad ? 'Cancel' : 'Not now'}</Text>
+        </Pressable>
+      </View>
 
       <IntentOptionPicker
         visible={askPickerOpen}
@@ -223,52 +214,80 @@ export default function EventIntent() {
   );
 }
 
+function IntentCard({
+  label,
+  selectedIds,
+  optionMap,
+  max,
+  onRemove,
+  onOpenPicker,
+  needsDetail,
+  detailValue,
+  onDetailChange,
+  detailPlaceholder,
+}: {
+  label: string;
+  selectedIds: string[];
+  optionMap: Record<string, { label: string }>;
+  max: number;
+  onRemove: (id: string) => void;
+  onOpenPicker: () => void;
+  needsDetail: boolean;
+  detailValue: string;
+  onDetailChange: (v: string) => void;
+  detailPlaceholder: string;
+}) {
+  return (
+    <Card style={styles.card}>
+      <View style={styles.cardHeaderRow}>
+        <SectionLabel tone="brass">{label}</SectionLabel>
+        <View style={styles.spacer} />
+        <Text style={styles.count}>
+          {selectedIds.length} / {max}
+        </Text>
+      </View>
+
+      <View style={styles.chipRow}>
+        {selectedIds.map((optionId) => (
+          <Chip key={optionId} label={optionMap[optionId]?.label ?? optionId} tone="selected" onRemove={() => onRemove(optionId)} />
+        ))}
+        {selectedIds.length < max ? (
+          <Chip label={selectedIds.length === 0 ? 'Add' : 'One more'} tone="dashed" icon="add" onPress={onOpenPicker} />
+        ) : null}
+      </View>
+      {needsDetail ? <Text style={styles.errorText}>Add a few words for "Other".</Text> : null}
+
+      <View style={styles.divider} />
+      <Text style={styles.helper}>Add a detail and the matching gets sharper</Text>
+      <TextInput
+        style={styles.input}
+        value={detailValue}
+        onChangeText={onDetailChange}
+        placeholder={detailPlaceholder}
+        placeholderTextColor={colors.textMuted}
+        multiline
+      />
+    </Card>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  content: { padding: 20 },
-  intro: { fontSize: 13, color: '#888', marginBottom: 20, lineHeight: 19 },
-  label: { fontSize: 15, fontWeight: '700', marginBottom: 10 },
-  secondLabel: { marginTop: 28 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#f4efe9',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  chipText: { fontSize: 13, color: '#4A3B31', fontWeight: '600' },
-  chooseButton: {
-    borderWidth: 1,
-    borderColor: '#4A3B31',
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  chooseButtonText: { color: '#4A3B31', fontSize: 14, fontWeight: '700' },
-  errorText: { fontSize: 12, color: '#cc3333', marginTop: 6 },
-  helper: { fontSize: 12, color: '#888', marginTop: 14, marginBottom: 8 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 15,
-    minHeight: 60,
-    textAlignVertical: 'top',
-  },
-  saveButton: {
-    backgroundColor: '#4A3B31',
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 28,
-  },
-  saveButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  cancelButton: { paddingVertical: 16, alignItems: 'center' },
-  cancelButtonText: { color: '#666', fontSize: 14, fontWeight: '600' },
-  buttonDisabled: { opacity: 0.5 },
+  container: { flex: 1, backgroundColor: colors.paper },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.paper },
+  content: { padding: spacing.gutter },
+  topRow: { flexDirection: 'row', alignItems: 'center' },
+  spacer: { flex: 1 },
+  headline: { ...typeStyles.screenHeadline, marginTop: 20 },
+  subhead: { fontSize: 13, color: colors.textTertiary, marginTop: 8, marginBottom: 22, lineHeight: 19 },
+  card: { marginBottom: 16 },
+  cardHeaderRow: { flexDirection: 'row', alignItems: 'center' },
+  count: { fontSize: 11, fontWeight: '600', color: colors.textMuted },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  errorText: { fontSize: 12, color: colors.error, marginTop: 8 },
+  divider: { height: 1, backgroundColor: colors.ruleInner, marginTop: 14, marginBottom: 12 },
+  helper: { fontSize: 12, color: colors.textTertiary, marginBottom: 8 },
+  input: { fontSize: 14.5, color: colors.ink, minHeight: 40, textAlignVertical: 'top', padding: 0 },
+  footer: { marginTop: 12 },
+  notNowButton: { paddingVertical: 16, alignItems: 'center' },
+  notNowText: { color: colors.textTertiary, fontSize: 14, fontWeight: '600' },
 });

@@ -1,5 +1,9 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { ProfileCard } from './ProfileCard';
+import { Card } from './Card';
+import { LetteredAvatar } from './LetteredAvatar';
+import { WhyYouTwo } from './WhyYouTwo';
+import { PrimaryButton, ResolvedButton } from './Buttons';
+import { colors, avatarSizes, typeStyles } from '../lib/theme';
 import type { EventAttendee } from '../lib/api/events';
 
 type ConnectStatus = 'none' | 'requested' | 'connected';
@@ -10,58 +14,51 @@ type Props = {
   onPress: () => void;
   onConnect: () => void;
   reason?: string | null;
+  // 1-based rank, shown as a "01"/"02" badge — Top matches tab only.
+  rank?: number;
 };
 
-export function EventAttendeeCard({ attendee, status, onPress, onConnect, reason }: Props) {
+export function EventAttendeeCard({ attendee, status, onPress, onConnect, reason, rank }: Props) {
+  const subtitle = [attendee.title, attendee.employer].map((s) => s?.trim()).filter(Boolean).join(' at ');
+
   return (
-    <View style={styles.wrap}>
-      <ProfileCard
-        name={attendee.full_name}
-        headline={attendee.headline}
-        employer={attendee.employer}
-        title={attendee.title}
-        undergradSchool={attendee.undergrad_school}
-        undergradYear={attendee.undergrad_year}
-        gradSchool={attendee.grad_school}
-        gradYear={attendee.grad_year}
-        photoUrl={attendee.photo_url}
-        onPress={onPress}
-      />
-      {reason ? <Text style={styles.reason}>{reason}</Text> : null}
+    <Card style={styles.card}>
+      <Pressable style={styles.headRow} onPress={onPress}>
+        <LetteredAvatar name={attendee.full_name} photoUrl={attendee.photo_url} size={avatarSizes.matchCard} />
+        <View style={styles.info}>
+          <View style={styles.nameRow}>
+            <Text style={typeStyles.cardName}>{attendee.full_name}</Text>
+            {rank !== undefined ? (
+              <View style={styles.rankBadge}>
+                <Text style={styles.rankBadgeText}>{String(rank).padStart(2, '0')}</Text>
+              </View>
+            ) : null}
+          </View>
+          {subtitle ? <Text style={typeStyles.cardSubtitle}>{subtitle}</Text> : null}
+        </View>
+      </Pressable>
+
+      {reason ? <WhyYouTwo reason={reason} /> : null}
+
       <View style={styles.actionRow}>
         {status === 'connected' ? (
-          <View style={[styles.pill, styles.connectedPill]}>
-            <Text style={styles.connectedPillText}>Connected</Text>
-          </View>
+          <ResolvedButton label="Connected" />
         ) : status === 'requested' ? (
-          <View style={[styles.pill, styles.requestedPill]}>
-            <Text style={styles.requestedPillText}>Requested</Text>
-          </View>
+          <ResolvedButton label="Requested" />
         ) : (
-          <Pressable style={[styles.pill, styles.connectPill]} onPress={onConnect}>
-            <Text style={styles.connectPillText}>Connect</Text>
-          </Pressable>
+          <PrimaryButton label="Connect" onPress={onConnect} />
         )}
       </View>
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { paddingBottom: 4, borderBottomWidth: 1, borderColor: '#eee' },
-  reason: {
-    fontSize: 12,
-    color: '#3b5bdb',
-    fontStyle: 'italic',
-    paddingHorizontal: 16,
-    paddingTop: 2,
-  },
-  actionRow: { paddingHorizontal: 16, paddingVertical: 8, alignItems: 'flex-start' },
-  pill: { borderRadius: 16, paddingHorizontal: 14, paddingVertical: 6 },
-  connectPill: { backgroundColor: '#4A3B31' },
-  connectPillText: { color: '#fff', fontSize: 13, fontWeight: '700' },
-  requestedPill: { backgroundColor: '#f0f0f0' },
-  requestedPillText: { color: '#888', fontSize: 13, fontWeight: '600' },
-  connectedPill: { backgroundColor: '#e6f4ea' },
-  connectedPillText: { color: '#2d7a45', fontSize: 13, fontWeight: '700' },
+  card: { marginHorizontal: 20, marginVertical: 6 },
+  headRow: { flexDirection: 'row', gap: 12 },
+  info: { flex: 1, gap: 2 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  rankBadge: { backgroundColor: colors.brassChipBg, borderRadius: 999, paddingHorizontal: 7, paddingVertical: 2 },
+  rankBadgeText: { fontFamily: 'monospace', fontSize: 10, color: colors.brassChipText },
+  actionRow: { marginTop: 14 },
 });

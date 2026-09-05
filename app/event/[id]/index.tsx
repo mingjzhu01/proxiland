@@ -1,10 +1,16 @@
-import { useCallback, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { View, Text, ScrollView, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { EventAttendeeCard } from '../../../components/EventAttendeeCard';
+import { SegmentedControl, type Segment } from '../../../components/SegmentedControl';
+import { LetteredAvatar } from '../../../components/LetteredAvatar';
+import { SectionLabel } from '../../../components/SectionLabel';
 import { getMyConnections } from '../../../lib/api/connections';
 import { EVENT_INTENT_DEFAULTS } from '../../../lib/eventIntentConfig';
 import { logSessionEvent } from '../../../lib/api/instrumentation';
+import { ROLE_CATEGORY_LABELS } from '../../../lib/allowedValues';
+import { colors, avatarSizes, typeStyles, spacing, radii } from '../../../lib/theme';
 import {
   getMyActiveEvents,
   getEventAttendees,
@@ -20,15 +26,24 @@ import {
   type EventMatch,
 } from '../../../lib/api/events';
 
+function pluralRoleLabel(role: string | null): string {
+  if (!role) return 'Other';
+  const label = ROLE_CATEGORY_LABELS[role as keyof typeof ROLE_CATEGORY_LABELS] ?? role;
+  return label.endsWith('s') ? label.toUpperCase() : `${label.toUpperCase()}S`;
+}
+
 export default function EventScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [event, setEvent] = useState<EventSummary | null>(null);
+  const [attendees, setAttendees] = useState<EventAttendee[]>([]);
   const [attendeeById, setAttendeeById] = useState<Map<string, EventAttendee>>(new Map());
   const [topMatches, setTopMatches] = useState<EventMatch[]>([]);
   const [sharedOverlap, setSharedOverlap] = useState<EventMatch[]>([]);
   const [connectedUserIds, setConnectedUserIds] = useState<Set<string>>(new Set());
   const [requestedUserIds, setRequestedUserIds] = useState<Set<string>>(new Set());
+  const [segment, setSegment] = useState<'top' | 'overlap' | 'everyone'>('top');
+  const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
@@ -42,14 +57,15 @@ export default function EventScreen() {
           return;
         }
 
-        const [myEvents, attendees, myConnections, requestedIds] = await Promise.all([
+        const [myEvents, attendeeList, myConnections, requestedIds] = await Promise.all([
           getMyActiveEvents(),
           getEventAttendees(id),
           getMyConnections(),
           getOutgoingEventConnectTargetIds(id),
         ]);
         setEvent(myEvents.find((e) => e.id === id) ?? null);
-        setAttendeeById(new Map(attendees.map((a) => [a.user_id, a])));
+        setAttendees(attendeeList);
+        setAttendeeById(new Map(attendeeList.map((a) => [a.user_id, a])));
         setConnectedUserIds(new Set(myConnections.map((c) => c.other!.id)));
         setRequestedUserIds(requestedIds);
 
@@ -108,7 +124,7 @@ export default function EventScreen() {
     }
   }
 
-  async function handleLeave() {
+  function handleLeave() {
     Alert.alert('Leave this event?', "You'll stop seeing attendees and they'll stop seeing you.", [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -129,31 +145,42 @@ export default function EventScreen() {
     ]);
   }
 
+  function handleMenu() {
+    Alert.alert('Event options', undefined, [
+      { text: 'Leave event', style: 'destructive', onPress: handleLeave },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }
+
   function statusFor(userId: string): 'none' | 'requested' | 'connected' {
     if (connectedUserIds.has(userId)) return 'connected';
     if (requestedUserIds.has(userId)) return 'requested';
     return 'none';
   }
 
-  function renderMatch(m: EventMatch) {
-    const attendee = attendeeById.get(m.candidate_user_id);
-    if (!attendee) return null;
-    return (
-      <EventAttendeeCard
-        key={m.candidate_user_id}
-        attendee={attendee}
-        status={statusFor(attendee.user_id)}
-        reason={m.match_reason}
-        onPress={() => router.push(`/profile/${attendee.user_id}`)}
-        onConnect={() => handleConnect(attendee.user_id)}
-      />
-    );
-  }
+  const topMatchUserIds = useMemo(() => new Set(topMatches.map((m) => m.candidate_user_id)), [topMatches]);
+
+  const filteredGroupedAttendees = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const filtered = q
+      ? attendees.filter((a) =>
+          [a.full_name, a.employer, a.undergrad_school, a.grad_school].some((f) => f?.toLowerCase().includes(q))
+        )
+      : attendees;
+
+    const groups = new Map<string, EventAttendee[]>();
+    for (const a of filtered) {
+      const key = a.role_category ?? 'other';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(a);
+    }
+    return Array.from(groups.entries()).map(([role, list]) => ({ role, list }));
+  }, [attendees, search]);
 
   if (isLoading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.brand} />
       </View>
     );
   }
@@ -161,80 +188,230 @@ export default function EventScreen() {
   if (!event) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.body}>You're not currently part of this event.</Text>
+        <Text style={styles.notMemberText}>You're not currently part of this event.</Text>
       </View>
     );
   }
 
-  return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
-    >
-      <View style={styles.header}>
-        <Text style={styles.title}>{event.name}</Text>
-        {event.organizer_name ? <Text style={styles.organizer}>Hosted by {event.organizer_name}</Text> : null}
-        <Text style={styles.count}>{attendeeById.size} {attendeeById.size === 1 ? 'other attendee' : 'other attendees'}</Text>
+  const segments: Segment[] = [
+    { key: 'top', label: 'Top matches', count: topMatches.length },
+    { key: 'overlap', label: 'Overlap', count: sharedOverlap.length },
+    { key: 'everyone', label: 'Everyone', count: attendees.length },
+  ];
 
-        <Pressable style={styles.intentButton} onPress={() => router.push(`/event/${id}/intent`)}>
-          <Text style={styles.intentButtonText}>Edit what you're looking for</Text>
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.headerTopRow}>
+          <Pressable onPress={() => router.back()} hitSlop={10}>
+            <Ionicons name="chevron-back" size={22} color="rgba(245,239,230,.78)" />
+          </Pressable>
+          <SectionLabel tone="brass" style={{ color: colors.brassOnDark }}>Live event</SectionLabel>
+          <View style={styles.spacer} />
+          <Pressable onPress={handleMenu} hitSlop={10} disabled={isLeaving}>
+            <Ionicons name="ellipsis-horizontal" size={20} color="rgba(245,239,230,.78)" />
+          </Pressable>
+        </View>
+
+        <Text style={styles.eventName}>{event.name}</Text>
+        <Text style={styles.eventMeta}>
+          {[event.organizer_name, `${attendees.length} here now`].filter(Boolean).join(' · ')}
+        </Text>
+
+        <Pressable style={styles.editButton} onPress={() => router.push(`/event/${id}/intent`)}>
+          <Text style={styles.editButtonText}>Edit your ask & offer</Text>
         </Pressable>
       </View>
 
-      <Text style={styles.sectionTitle}>Top matches</Text>
-      {topMatches.length > 0 ? (
-        topMatches.map(renderMatch)
-      ) : (
-        <Text style={styles.emptySection}>No strong matches yet — check back as more people join.</Text>
-      )}
+      <View style={styles.segmentBand}>
+        <SegmentedControl segments={segments} activeKey={segment} onChange={(k) => setSegment(k as typeof segment)} />
+      </View>
 
-      {sharedOverlap.length > 0 ? (
-        <>
-          <Text style={styles.sectionTitle}>Shared overlap</Text>
-          {sharedOverlap.map(renderMatch)}
-        </>
-      ) : null}
+      <ScrollView
+        style={styles.body}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={colors.brand} />}
+      >
+        {segment === 'top' ? (
+          <>
+            <Text style={styles.explainer}>Ranked on how your ask meets their offer.</Text>
+            {topMatches.length > 0 ? (
+              topMatches.map((m, i) => {
+                const attendee = attendeeById.get(m.candidate_user_id);
+                if (!attendee) return null;
+                return (
+                  <EventAttendeeCard
+                    key={m.candidate_user_id}
+                    attendee={attendee}
+                    status={statusFor(attendee.user_id)}
+                    reason={m.match_reason}
+                    rank={i + 1}
+                    onPress={() => router.push(`/profile/${attendee.user_id}`)}
+                    onConnect={() => handleConnect(attendee.user_id)}
+                  />
+                );
+              })
+            ) : (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyCardText}>No strong matches yet — check back as more people join.</Text>
+              </View>
+            )}
+          </>
+        ) : null}
 
-      <Pressable style={styles.attendeesButton} onPress={() => router.push(`/event/${id}/attendees`)}>
-        <Text style={styles.attendeesButtonText}>See all attendees</Text>
-      </Pressable>
+        {segment === 'overlap' ? (
+          <>
+            {sharedOverlap.length > 0 ? (
+              sharedOverlap.map((m) => {
+                const attendee = attendeeById.get(m.candidate_user_id);
+                if (!attendee) return null;
+                return (
+                  <EventAttendeeCard
+                    key={m.candidate_user_id}
+                    attendee={attendee}
+                    status={statusFor(attendee.user_id)}
+                    reason={m.match_reason}
+                    onPress={() => router.push(`/profile/${attendee.user_id}`)}
+                    onConnect={() => handleConnect(attendee.user_id)}
+                  />
+                );
+              })
+            ) : (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyCardText}>No shared-background matches yet.</Text>
+              </View>
+            )}
+          </>
+        ) : null}
 
-      <Pressable style={[styles.leaveButton, isLeaving && styles.buttonDisabled]} onPress={handleLeave} disabled={isLeaving}>
-        <Text style={styles.leaveButtonText}>{isLeaving ? 'Leaving…' : 'Leave event'}</Text>
-      </Pressable>
-    </ScrollView>
+        {segment === 'everyone' ? (
+          <>
+            <View style={styles.searchField}>
+              <Ionicons name="search" size={15} color={colors.textMuted} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search name, company, school"
+                placeholderTextColor={colors.textMuted}
+                value={search}
+                onChangeText={setSearch}
+              />
+            </View>
+            {filteredGroupedAttendees.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <Text style={styles.emptyCardText}>No one else has joined yet — check back soon.</Text>
+              </View>
+            ) : (
+              filteredGroupedAttendees.map(({ role, list }) => (
+                <View key={role}>
+                  <SectionLabel style={styles.groupLabel}>
+                    {pluralRoleLabel(role === 'other' ? null : role)} · {list.length}
+                  </SectionLabel>
+                  <View style={styles.rowGroup}>
+                    {list.map((a) => {
+                      const status = statusFor(a.user_id);
+                      const subtitle = [a.title, a.employer].map((s) => s?.trim()).filter(Boolean).join(' at ');
+                      return (
+                        <Pressable key={a.user_id} style={styles.attendeeRow} onPress={() => router.push(`/profile/${a.user_id}`)}>
+                          <LetteredAvatar name={a.full_name} photoUrl={a.photo_url} size={avatarSizes.attendeeRow} />
+                          <View style={styles.attendeeInfo}>
+                            <Text style={styles.attendeeName}>{a.full_name}</Text>
+                            {subtitle ? <Text style={styles.attendeeSubtitle}>{subtitle}</Text> : null}
+                            {topMatchUserIds.has(a.user_id) ? (
+                              <Text style={styles.topMatchBadge}>Top match</Text>
+                            ) : null}
+                          </View>
+                          <Pressable
+                            style={[
+                              styles.statusPill,
+                              status === 'connected' && styles.statusPillConnected,
+                              status === 'requested' && styles.statusPillRequested,
+                            ]}
+                            onPress={() => status === 'none' && handleConnect(a.user_id)}
+                            disabled={status !== 'none'}
+                          >
+                            <Text
+                              style={[
+                                styles.statusPillText,
+                                status === 'connected' && styles.statusPillTextConnected,
+                                status === 'requested' && styles.statusPillTextRequested,
+                              ]}
+                            >
+                              {status === 'connected' ? 'Connected' : status === 'requested' ? 'Requested' : 'Connect'}
+                            </Text>
+                          </Pressable>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              ))
+            )}
+          </>
+        ) : null}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  header: { padding: 16, borderBottomWidth: 1, borderColor: '#eee' },
-  title: { fontSize: 20, fontWeight: '700' },
-  organizer: { fontSize: 13, color: '#888', marginTop: 2 },
-  count: { fontSize: 13, color: '#666', marginTop: 8 },
-  body: { padding: 24, textAlign: 'center', color: '#888', fontSize: 14 },
-  intentButton: {
-    backgroundColor: '#4A3B31',
-    borderRadius: 10,
+  container: { flex: 1, backgroundColor: colors.paperEvent },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: colors.paperEvent },
+  body: { flex: 1 },
+  notMemberText: { fontSize: 14, color: colors.textTertiary, textAlign: 'center' },
+  header: { backgroundColor: colors.brand, paddingHorizontal: spacing.gutter, paddingTop: 8, paddingBottom: 18 },
+  headerTopRow: { flexDirection: 'row', alignItems: 'center' },
+  spacer: { flex: 1 },
+  eventName: { ...typeStyles.eventTitle, marginTop: 10 },
+  eventMeta: { fontSize: 12.5, color: 'rgba(245,239,230,.66)', marginTop: 4 },
+  editButton: {
+    backgroundColor: colors.paper,
+    borderRadius: radii.button,
     paddingVertical: 12,
     alignItems: 'center',
     marginTop: 14,
   },
-  intentButtonText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  sectionTitle: { fontSize: 16, fontWeight: '700', padding: 16, paddingBottom: 4 },
-  emptySection: { paddingHorizontal: 16, paddingBottom: 16, color: '#888', fontSize: 13 },
-  attendeesButton: {
-    borderWidth: 1,
-    borderColor: '#4A3B31',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginTop: 20,
+  editButtonText: { color: colors.ink, fontSize: 14, fontWeight: '600' },
+  segmentBand: {
+    paddingHorizontal: spacing.gutter,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderColor: '#EADFCD',
+    backgroundColor: colors.paperEvent,
   },
-  attendeesButtonText: { color: '#4A3B31', fontSize: 14, fontWeight: '700' },
-  leaveButton: { margin: 16, paddingVertical: 14, alignItems: 'center' },
-  leaveButtonText: { color: '#cc3333', fontSize: 15, fontWeight: '600' },
-  buttonDisabled: { opacity: 0.5 },
+  explainer: { fontSize: 12.5, color: colors.textTertiary, paddingHorizontal: spacing.gutter, paddingTop: 14, paddingBottom: 4 },
+  emptyCard: {
+    marginHorizontal: spacing.gutter,
+    marginTop: 14,
+    borderWidth: 1,
+    borderColor: colors.rule,
+    borderRadius: radii.card,
+    padding: 16,
+  },
+  emptyCardText: { fontSize: 13, color: colors.textTertiary },
+  searchField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.rule,
+    borderRadius: radii.pill,
+    marginHorizontal: spacing.gutter,
+    marginTop: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  searchInput: { flex: 1, fontSize: 14, color: colors.ink },
+  groupLabel: { marginHorizontal: spacing.gutter, marginTop: 20, marginBottom: 8 },
+  rowGroup: { marginHorizontal: spacing.gutter, borderTopWidth: 1, borderColor: colors.ruleInner },
+  attendeeRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderColor: colors.ruleInner },
+  attendeeInfo: { flex: 1, gap: 1 },
+  attendeeName: { fontSize: 15.5, fontWeight: '600', color: colors.ink },
+  attendeeSubtitle: { fontSize: 12.5, color: colors.textSecondary },
+  topMatchBadge: { fontSize: 10.5, color: colors.brass, fontWeight: '600', marginTop: 1 },
+  statusPill: { borderRadius: radii.pill, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: colors.ink },
+  statusPillConnected: { backgroundColor: colors.liveChipBg },
+  statusPillRequested: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.rule },
+  statusPillText: { fontSize: 12, fontWeight: '600', color: colors.inkOn },
+  statusPillTextConnected: { color: colors.liveChipText },
+  statusPillTextRequested: { color: colors.textMuted },
 });

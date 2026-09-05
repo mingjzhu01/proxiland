@@ -1,5 +1,7 @@
-import { View, Text, Image, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { formatEducation } from '../lib/formatEducation';
+import { LetteredAvatar } from './LetteredAvatar';
+import { colors, avatarSizes } from '../lib/theme';
 
 type Props = {
   name: string;
@@ -24,6 +26,9 @@ function formatDistance(meters: number): string {
   return `${(meters / 1000).toFixed(1)} km away`;
 }
 
+// Compact row treatment — People/Connections list, attendee rows, match rows. The Nearby
+// feed's own rich full-identity card (avatar + why-you-two + Connect button) is a separate
+// component, NearbyIdentityCard, since that layout doesn't fit a reusable row shape.
 export function ProfileCard({
   name,
   headline,
@@ -53,19 +58,13 @@ export function ProfileCard({
   return (
     <View style={styles.card}>
       <Pressable onPress={onPhotoPress ?? onPress}>
-        {photoUrl ? (
-          <Image source={{ uri: photoUrl }} style={styles.avatar} />
-        ) : (
-          <View style={[styles.avatar, styles.avatarPlaceholder]}>
-            <Text style={styles.avatarInitial}>{name.charAt(0).toUpperCase()}</Text>
-          </View>
-        )}
+        <LetteredAvatar name={name} photoUrl={photoUrl} size={avatarSizes.messageRow} />
       </Pressable>
       <Pressable style={styles.info} onPress={onPress}>
         <Text style={styles.name}>{name}</Text>
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-        {headline ? <Text style={styles.headline}>{'• '}{headline}</Text> : null}
-        {education ? <Text style={styles.education}>{'• '}{education}</Text> : null}
+        {headline ? <Text style={styles.tertiary}>{'· '}{headline}</Text> : null}
+        {education ? <Text style={styles.tertiary}>{'· '}{education}</Text> : null}
         {distanceMeters !== undefined ? (
           <Text style={styles.distance}>{formatDistance(distanceMeters)}</Text>
         ) : null}
@@ -80,16 +79,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderBottomWidth: 1,
-    borderColor: '#eee',
+    borderColor: colors.ruleInner,
     gap: 12,
   },
-  avatar: { width: 56, height: 56, borderRadius: 28 },
-  avatarPlaceholder: { backgroundColor: '#ddd', justifyContent: 'center', alignItems: 'center' },
-  avatarInitial: { fontSize: 20, fontWeight: '700', color: '#555' },
   info: { flex: 1 },
-  name: { fontSize: 16, fontWeight: '600' },
-  subtitle: { fontSize: 14, color: '#333' },
-  education: { fontSize: 13, color: '#777' },
-  headline: { fontSize: 13, color: '#777' },
-  distance: { fontSize: 12, color: '#0066cc', marginTop: 2 },
+  name: { fontSize: 16, fontWeight: '600', color: colors.ink, letterSpacing: -0.16 },
+  subtitle: { fontSize: 13.5, color: colors.textSecondary, marginTop: 1 },
+  tertiary: { fontSize: 12.5, color: colors.textMuted, marginTop: 1 },
+  distance: { fontSize: 12, color: colors.brass, marginTop: 2, fontWeight: '600' },
 });
