@@ -70,6 +70,10 @@ export default function Nearby() {
   const [incomingReveals, setIncomingReveals] = useState<IncomingRevealRequest[]>([]);
   const [anonCards, setAnonCards] = useState<FeedCardV2[]>([]);
   const [identityCards, setIdentityCards] = useState<FeedCardV2[]>([]);
+  // Which of `connections` are actually in the current geo scope right now — a connection
+  // only earns a spot in the "Showing full identity" section (instead of just living in the
+  // People tab) if they're physically nearby, not simply because you're connected at all.
+  const [nearbyUserIds, setNearbyUserIds] = useState<Set<string>>(new Set());
   const [askedTargetIds, setAskedTargetIds] = useState<Set<string>>(new Set());
   const [connectRequestedIds, setConnectRequestedIds] = useState<Set<string>>(new Set());
   const [overlapByUserId, setOverlapByUserId] = useState<Map<string, Overlap>>(new Map());
@@ -106,6 +110,7 @@ export default function Nearby() {
         setAggregate(null);
         setAnonCards([]);
         setIdentityCards([]);
+        setNearbyUserIds(new Set());
         setNearbyEvents([]);
         return;
       }
@@ -128,6 +133,7 @@ export default function Nearby() {
       setAggregate(aggregateView);
       setAskedTargetIds(askedIds);
       setConnectRequestedIds(connectRequestedIdSet);
+      setNearbyUserIds(new Set(feedCards.map((c) => c.user_id)));
 
       // Only rank/show "why you two" for people who'll actually render as a stranger card —
       // someone already connected or already mid-reveal shows their real profile instead and
@@ -232,7 +238,9 @@ export default function Nearby() {
   const joinableNearbyEvents = nearbyEvents.filter((e) => !joinedEventIds.has(e.id));
 
   const identityGroup: ListItem[] = [
-    ...connections.filter((c) => c.other).map((c) => ({ kind: 'connected' as const, key: `c-${c.id}`, connection: c })),
+    ...connections
+      .filter((c) => c.other && nearbyUserIds.has(c.other.id))
+      .map((c) => ({ kind: 'connected' as const, key: `c-${c.id}`, connection: c })),
     ...incomingReveals
       .filter((r) => r.requester)
       .map((r) => ({ kind: 'incomingReveal' as const, key: `r-${r.id}`, reveal: r })),
