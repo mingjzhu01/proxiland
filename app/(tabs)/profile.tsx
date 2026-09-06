@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     marginTop: 6,
   },
-  verifiedBadgeText: { fontFamily: fonts.wordmark, fontSize: 11, fontWeight: '600', color: colors.liveChipText },
+  verifiedBadgeText: { fontFamily: fonts.wordmark, fontSize: 11, color: colors.liveChipText },
   verifyChip: {
     borderWidth: 1,
     borderColor: colors.rule,
@@ -230,11 +230,11 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     marginTop: 6,
   },
-  verifyChipText: { fontFamily: fonts.wordmark, fontSize: 11.5, fontWeight: '600', color: colors.textSecondary },
+  verifyChipText: { fontFamily: fonts.wordmark, fontSize: 11.5, color: colors.textSecondary },
   visibilityCard: { backgroundColor: colors.brand, borderRadius: radii.card, padding: 17, marginTop: 22 },
   visibilityTopRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   visibilityTextWrap: { flex: 1, gap: 4 },
-  visibilityState: { fontFamily: fonts.wordmark, fontSize: 15, fontWeight: '600', color: colors.inkOn },
+  visibilityState: { fontFamily: fonts.wordmark, fontSize: 15, color: colors.inkOn },
   visibilityDivider: { height: 1, backgroundColor: 'rgba(245,239,230,.16)', marginVertical: 14 },
   previewRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   previewScale: { transform: [{ scale: 0.85 }], marginLeft: -6 },
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.rule,
   },
-  securityBannerTitle: { fontFamily: fonts.wordmark, fontSize: 14, fontWeight: '700', color: colors.brass },
+  securityBannerTitle: { fontFamily: fonts.wordmark, fontSize: 14, color: colors.brass },
   securityBannerText: { fontFamily: fonts.wordmark, fontSize: 13, color: colors.textTertiary, marginTop: 4 },
   securityBannerButton: {
     backgroundColor: colors.brass,
@@ -272,5 +272,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 10,
   },
-  securityBannerButtonText: { fontFamily: fonts.wordmark, color: colors.inkOn, fontSize: 13, fontWeight: '600' },
+  securityBannerButtonText: { fontFamily: fonts.wordmark, color: colors.inkOn, fontSize: 13 },
 });

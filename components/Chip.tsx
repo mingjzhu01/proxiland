@@ -13,7 +13,9 @@ type Props = {
 };
 
 // Metadata chip (brass/neutral grounds), interactive selected chip (ink ground + close
-// glyph), or the dashed "Add" chip. radius 999.
+// glyph), or the dashed "Add" chip. Same corner radius as the primary buttons (radii.button)
+// so a screen's chips and its main action read as one shape language, not a pill next to a
+// rectangle.
 export function Chip({ label, tone = 'neutral', onRemove, onPress, icon }: Props) {
   const content = (
     <View style={[styles.base, toneStyles[tone], onRemove ? styles.interactivePad : styles.metaPad]}>
@@ -35,7 +37,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    borderRadius: radii.pill,
+    borderRadius: radii.button,
     alignSelf: 'flex-start',
   },
   metaPad: { paddingVertical: 4, paddingHorizontal: 8 },

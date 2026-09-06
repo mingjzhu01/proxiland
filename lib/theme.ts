@@ -64,6 +64,7 @@ export const spacing = {
 export const typeStyles = {
   wordmark: { fontFamily: fonts.wordmark, fontSize: 42, lineHeight: 45 },
   tagline: {
+    fontFamily: fonts.wordmark,
     fontSize: 14,
     lineHeight: 21,
     letterSpacing: 0.28,
@@ -73,21 +74,23 @@ export const typeStyles = {
   eventTitle: { fontFamily: fonts.serif, fontSize: 29, lineHeight: 33, color: colors.inkOn },
   matchRationale: { fontFamily: fonts.serif, fontSize: 19, lineHeight: 27, color: colors.ink },
   matchRationaleChat: { fontFamily: fonts.serif, fontSize: 17, lineHeight: 24, color: colors.ink },
-  cardName: { fontSize: 17, fontWeight: '600' as const, letterSpacing: -0.17, color: colors.ink },
-  cardSubtitle: { fontSize: 13.5, color: colors.textSecondary },
-  cardTertiary: { fontSize: 12.5, color: colors.textMuted },
-  anonLine: { fontSize: 16.5, fontWeight: '500' as const, lineHeight: 23, color: colors.ink },
+  cardName: { fontFamily: fonts.wordmark, fontSize: 17, fontWeight: '600' as const, letterSpacing: -0.17, color: colors.ink },
+  cardSubtitle: { fontFamily: fonts.wordmark, fontSize: 13.5, color: colors.textSecondary },
+  cardTertiary: { fontFamily: fonts.wordmark, fontSize: 12.5, color: colors.textMuted },
+  anonLine: { fontFamily: fonts.wordmark, fontSize: 16.5, fontWeight: '500' as const, lineHeight: 23, color: colors.ink },
   sectionLabel: {
     fontFamily: fonts.wordmark,
     fontSize: 10,
     textTransform: 'uppercase' as const,
     letterSpacing: 1.6,
   },
-  chip: { fontSize: 11, fontWeight: '600' as const },
-  primaryButton: { fontSize: 15, fontWeight: '600' as const },
-  body: { fontSize: 14, lineHeight: 21 },
-  helper: { fontSize: 12.5, lineHeight: 18.5, color: colors.textTertiary },
-  tabLabel: { fontSize: 9.5, fontWeight: '600' as const },
+  // No fontWeight — Yeseva One only has one loaded weight, so a '600'/'700' here is a
+  // synthetic/faux bold that reads as muddy rather than emphatic at small sizes.
+  chip: { fontFamily: fonts.wordmark, fontSize: 11 },
+  primaryButton: { fontFamily: fonts.wordmark, fontSize: 15 },
+  body: { fontFamily: fonts.wordmark, fontSize: 14, lineHeight: 21 },
+  helper: { fontFamily: fonts.wordmark, fontSize: 12.5, lineHeight: 18.5, color: colors.textTertiary },
+  tabLabel: { fontFamily: fonts.wordmark, fontSize: 9.5, fontWeight: '600' as const },
 } as const;
 
 export const avatarSizes = {

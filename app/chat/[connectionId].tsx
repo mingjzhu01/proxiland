@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paper,
   },
   headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  headerName: { fontFamily: fonts.wordmark, fontSize: 15.5, fontWeight: '600', color: colors.ink },
+  headerName: { fontFamily: fonts.wordmark, fontSize: 15.5, color: colors.ink },
   headerRole: { fontFamily: fonts.wordmark, fontSize: 11.5, color: colors.textMuted, marginTop: 1 },
   messageList: { flex: 1 },
   list: { padding: spacing.gutter, gap: 9, flexGrow: 1 },

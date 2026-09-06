@@ -66,7 +66,7 @@ export default function Connections() {
         </Pressable>
         <View style={styles.info}>
           <View style={styles.nameRow}>
-            <Text style={[styles.name, isUnread && styles.nameUnread]} numberOfLines={1}>
+            <Text style={styles.name} numberOfLines={1}>
               {other.full_name}
             </Text>
           </View>
@@ -166,8 +166,7 @@ const styles = StyleSheet.create({
   },
   info: { flex: 1, gap: 2 },
   nameRow: { flexDirection: 'row', alignItems: 'center' },
-  name: { fontFamily: fonts.wordmark, fontSize: 16, fontWeight: '600', color: colors.ink },
-  nameUnread: { fontWeight: '700' },
+  name: { fontFamily: fonts.wordmark, fontSize: 16, color: colors.ink },
   preview: { fontFamily: fonts.wordmark, fontSize: 13.5, color: colors.textTertiary },
-  previewUnread: { color: colors.ink, fontWeight: '500' },
+  previewUnread: { color: colors.ink },
 });
