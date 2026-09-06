@@ -133,6 +133,13 @@ function RootNavigation() {
           name="event/[id]/intent"
           options={{ headerShown: true, title: 'Your Intent', headerBackTitle: 'Event' }}
         />
+        {/* Organiser tools — reachable only from Settings, itself only shown to is_admin
+            accounts. Each screen renders its own header/back control, same pattern as the
+            other full-bleed-header screens above — headerShown: false throughout. */}
+        <Stack.Screen name="organizer/index" options={{ headerShown: false }} />
+        <Stack.Screen name="organizer/new" options={{ headerShown: false }} />
+        <Stack.Screen name="organizer/[id]/manage" options={{ headerShown: false }} />
+        <Stack.Screen name="organizer/[id]/edit" options={{ headerShown: false }} />
       </Stack>
       {/* Only mount the splash's actual text/logo once fonts are ready — mounting it earlier
           and letting the font "swap in" later doesn't work: once iOS paints a Text with the

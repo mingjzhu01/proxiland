@@ -14,6 +14,10 @@ type AuthContextValue = {
   // (see app/(tabs)/nearby.tsx). Client-derived display only; actual containment is enforced
   // at the database level (migration 0043), not by this flag.
   isDemo: boolean;
+  // True only for an account flagged organizer/admin (migration 0060) — drives whether the
+  // organizer screens are even reachable in the UI. Client-derived display only; every
+  // organizer RPC re-checks this server-side regardless of what the client shows.
+  isAdmin: boolean;
 };
 
 const AuthContext = createContext<AuthContextValue>({
@@ -22,6 +26,7 @@ const AuthContext = createContext<AuthContextValue>({
   hasProfile: null,
   refreshHasProfile: async () => {},
   isDemo: false,
+  isAdmin: false,
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -29,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
   const [isDemo, setIsDemo] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   async function checkHasProfile(userId: string) {
     const { data } = await supabase
@@ -44,6 +50,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsDemo(data?.is_demo ?? false);
   }
 
+  async function checkIsAdmin(userId: string) {
+    const { data } = await supabase.from('profiles').select('is_admin').eq('id', userId).maybeSingle();
+    setIsAdmin(data?.is_admin ?? false);
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
@@ -51,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.session) {
         checkHasProfile(data.session.user.id);
         checkIsDemo(data.session.user.id);
+        checkIsAdmin(data.session.user.id);
         registerForPushNotifications();
       }
     });
@@ -60,10 +72,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (newSession) {
         checkHasProfile(newSession.user.id);
         checkIsDemo(newSession.user.id);
+        checkIsAdmin(newSession.user.id);
         registerForPushNotifications();
       } else {
         setHasProfile(null);
         setIsDemo(false);
+        setIsAdmin(false);
       }
     });
 
@@ -75,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, isLoading, hasProfile, refreshHasProfile, isDemo }}>
+    <AuthContext.Provider value={{ session, isLoading, hasProfile, refreshHasProfile, isDemo, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

@@ -5,6 +5,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../lib/auth';
 import { colors, spacing, fonts } from '../lib/theme';
 
 function SettingsRow({
@@ -29,6 +30,7 @@ function SettingsRow({
 
 export default function Settings() {
   const router = useRouter();
+  const { isAdmin } = useAuth();
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -39,6 +41,11 @@ export default function Settings() {
       <View style={styles.section}>
         <SettingsRow icon="people-outline" label="Blocked users" onPress={() => router.push('/blocked-users')} />
       </View>
+      {isAdmin ? (
+        <View style={styles.section}>
+          <SettingsRow icon="calendar-outline" label="Organiser tools" onPress={() => router.push('/organizer')} />
+        </View>
+      ) : null}
       <View style={styles.section}>
         <SettingsRow icon="log-out-outline" label="Sign out" onPress={handleSignOut} />
       </View>
