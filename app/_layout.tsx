@@ -119,7 +119,12 @@ function RootNavigation() {
         <Stack.Screen name="event/[id]/index" options={{ headerShown: false }} />
         <Stack.Screen name="event/[id]/intent" options={{ headerShown: true, title: 'Your Intent' }} />
       </Stack>
-      {showBrandedSplash ? <BrandedSplash /> : null}
+      {/* Only mount the splash's actual text/logo once fonts are ready — mounting it earlier
+          and letting the font "swap in" later doesn't work: once iOS paints a Text with the
+          fallback font, it doesn't get redrawn just because the custom font becomes available
+          a moment afterward. Until then, show the same brand-colored ground with nothing on
+          it — visually seamless against the native launch screen underneath. */}
+      {showBrandedSplash ? (fontsLoaded ? <BrandedSplash /> : <View style={styles.splash} />) : null}
     </>
   );
 }
