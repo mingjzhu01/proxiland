@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
@@ -61,9 +61,14 @@ function BrandedSplash() {
 function RootNavigation() {
   const { session, isLoading } = useAuth();
   const segments = useSegments();
+  const pathname = usePathname();
   const router = useRouter();
   const [showBrandedSplash, setShowBrandedSplash] = useState(true);
   const [fontsLoaded] = useFonts({ Newsreader_400Regular, YesevaOne_400Regular });
+  // Where a deep link (an event invite, most commonly) was trying to take a signed-out user,
+  // captured right before the sign-in detour below so it can be resumed afterward instead of
+  // always dropping them on Nearby. A ref, not state — it shouldn't itself trigger a re-render.
+  const pendingPathRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (isLoading || !fontsLoaded) return;
@@ -73,6 +78,9 @@ function RootNavigation() {
       const inAuthGroup = segments[0] === '(auth)';
 
       if (!session && !inAuthGroup) {
+        if (pathname && pathname !== '/') {
+          pendingPathRef.current = pathname;
+        }
         router.replace('/(auth)/sign-in');
       } else if (session && inAuthGroup) {
         // Founder call: browsing (seeing anonymized cards, the other tabs) doesn't require a
@@ -80,13 +88,15 @@ function RootNavigation() {
         // individually where those actions happen (app/(tabs)/nearby.tsx,
         // components/AnonCard.tsx), not by blocking navigation entirely. No hasProfile check
         // here means new users land straight on the tabs after signing in.
-        router.replace('/(tabs)/nearby');
+        const resumePath = pendingPathRef.current;
+        pendingPathRef.current = null;
+        router.replace((resumePath as any) ?? '/(tabs)/nearby');
       }
       setShowBrandedSplash(false);
     }, remaining);
 
     return () => clearTimeout(timer);
-  }, [session, isLoading, fontsLoaded, segments, router]);
+  }, [session, isLoading, fontsLoaded, segments, pathname, router]);
 
   return (
     <>
@@ -114,6 +124,8 @@ function RootNavigation() {
         {/* headerShown: false — the screen renders its own close button over the camera
             view, per the visual redesign. */}
         <Stack.Screen name="scan-event" options={{ headerShown: false }} />
+        {/* headerShown: false — same close-button-over-content pattern as event-join. */}
+        <Stack.Screen name="join-event-code" options={{ headerShown: false }} />
         {/* headerShown: false — the screen renders its own full-bleed brand-colored header
             with a custom back chevron and menu, per the visual redesign. */}
         <Stack.Screen name="event/[id]/index" options={{ headerShown: false }} />

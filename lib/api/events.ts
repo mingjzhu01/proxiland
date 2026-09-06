@@ -22,6 +22,16 @@ export async function getEventByQrToken(token: string): Promise<EventSummary | n
   return data && data.length > 0 ? data[0] : null;
 }
 
+// Recovery path for "I have the app open and I'm signed in, but the QR link/deep-link never
+// resolved" — a human-typeable 6-character code, looked up the same way as the QR token
+// (hash comparison server-side, rate-limited). Reuses join_method 'qr' when actually joining —
+// both are "presented a valid invite," not worth a separate enum value to track apart.
+export async function getEventByShortCode(code: string): Promise<EventSummary | null> {
+  const { data, error } = await supabase.rpc('get_event_by_short_code', { p_code: code });
+  if (error) throw error;
+  return data && data.length > 0 ? data[0] : null;
+}
+
 export type JoinMethod = 'geofence_prompt' | 'qr' | 'admin_test';
 
 export async function joinEvent(eventId: string, joinMethod: JoinMethod): Promise<void> {

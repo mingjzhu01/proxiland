@@ -69,6 +69,9 @@ export default function ScanEvent() {
         </View>
         <Text style={styles.hint}>Point at the organiser's code</Text>
         <Text style={styles.support}>You'll see the event before you join anything.</Text>
+        <Pressable style={styles.codeLink} onPress={() => router.push('/join-event-code')} hitSlop={10}>
+          <Text style={styles.codeLinkText}>Enter code instead</Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -100,4 +103,6 @@ const styles = StyleSheet.create({
   bracketBottomRight: { bottom: -3, right: -3, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 26 },
   hint: { ...typeStyles.eventTitle, fontSize: 22, marginTop: 24, textAlign: 'center' },
   support: { fontFamily: fonts.wordmark, fontSize: 13, color: 'rgba(245,239,230,.75)', marginTop: 8, textAlign: 'center' },
+  codeLink: { marginTop: 20, padding: 8 },
+  codeLinkText: { fontFamily: fonts.wordmark, fontSize: 13, fontWeight: '600', color: colors.brassOnDark, textDecorationLine: 'underline' },
 });
