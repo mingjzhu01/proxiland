@@ -296,7 +296,7 @@ export default function EventScreen() {
               <Ionicons name="search" size={15} color={colors.textMuted} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search name, company, school"
+                placeholder="Search name, company or school"
                 placeholderTextColor={colors.textMuted}
                 value={search}
                 onChangeText={setSearch}
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.rule,
-    borderRadius: radii.pill,
+    borderRadius: radii.card,
     marginHorizontal: spacing.gutter,
     marginTop: 14,
     paddingHorizontal: 14,

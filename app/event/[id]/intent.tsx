@@ -6,12 +6,11 @@ import { getMyEventIntent, upsertEventIntent, isIntentComplete } from '../../../
 import { IntentOptionPicker } from '../../../components/IntentOptionPicker';
 import { Card } from '../../../components/Card';
 import { Chip } from '../../../components/Chip';
-import { SectionLabel } from '../../../components/SectionLabel';
 import { PrimaryButton } from '../../../components/Buttons';
 import { ASK_OPTION_BY_ID, OFFER_OPTION_BY_ID } from '../../../lib/eventIntentOptions';
 import { EVENT_INTENT_DEFAULTS } from '../../../lib/eventIntentConfig';
 import { logSessionEvent } from '../../../lib/api/instrumentation';
-import { colors, typeStyles, spacing } from '../../../lib/theme';
+import { colors, spacing, fonts } from '../../../lib/theme';
 
 export default function EventIntent() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -152,17 +151,11 @@ export default function EventIntent() {
         <Pressable onPress={handleCancel} hitSlop={10}>
           <Ionicons name="close" size={22} color={colors.textTertiary} />
         </Pressable>
-        <View style={styles.spacer} />
-        <SectionLabel tone="brass">Step 1 of 1</SectionLabel>
       </View>
-
-      <Text style={styles.headline}>What would make tonight worth it?</Text>
-      <Text style={styles.subhead}>
-        Only for this event. It resets when the event ends and never touches your profile.
-      </Text>
 
       <IntentCard
         label="I'm asking for"
+        style={styles.firstCard}
         selectedIds={askIds}
         optionMap={ASK_OPTION_BY_ID}
         max={EVENT_INTENT_DEFAULTS.maximumAskSelections}
@@ -216,6 +209,7 @@ export default function EventIntent() {
 
 function IntentCard({
   label,
+  style,
   selectedIds,
   optionMap,
   max,
@@ -227,6 +221,7 @@ function IntentCard({
   detailPlaceholder,
 }: {
   label: string;
+  style?: object;
   selectedIds: string[];
   optionMap: Record<string, { label: string }>;
   max: number;
@@ -238,9 +233,9 @@ function IntentCard({
   detailPlaceholder: string;
 }) {
   return (
-    <Card style={styles.card}>
+    <Card style={[styles.card, style]}>
       <View style={styles.cardHeaderRow}>
-        <SectionLabel tone="brass">{label}</SectionLabel>
+        <Text style={styles.cardLabel}>{label}</Text>
         <View style={styles.spacer} />
         <Text style={styles.count}>
           {selectedIds.length} / {max}
@@ -277,17 +272,17 @@ const styles = StyleSheet.create({
   content: { padding: spacing.gutter },
   topRow: { flexDirection: 'row', alignItems: 'center' },
   spacer: { flex: 1 },
-  headline: { ...typeStyles.screenHeadline, marginTop: 20 },
-  subhead: { fontSize: 13, color: colors.textTertiary, marginTop: 8, marginBottom: 22, lineHeight: 19 },
   card: { marginBottom: 16 },
+  firstCard: { marginTop: 16 },
   cardHeaderRow: { flexDirection: 'row', alignItems: 'center' },
-  count: { fontSize: 11, fontWeight: '600', color: colors.textMuted },
+  cardLabel: { fontFamily: fonts.wordmark, fontSize: 17, fontWeight: '700', color: colors.brass },
+  count: { fontFamily: fonts.wordmark, fontSize: 11, fontWeight: '600', color: colors.textMuted },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  errorText: { fontSize: 12, color: colors.error, marginTop: 8 },
+  errorText: { fontFamily: fonts.wordmark, fontSize: 12, color: colors.error, marginTop: 8 },
   divider: { height: 1, backgroundColor: colors.ruleInner, marginTop: 14, marginBottom: 12 },
-  helper: { fontSize: 12, color: colors.textTertiary, marginBottom: 8 },
-  input: { fontSize: 14.5, color: colors.ink, minHeight: 40, textAlignVertical: 'top', padding: 0 },
+  helper: { fontFamily: fonts.wordmark, fontSize: 12, color: colors.textTertiary, marginBottom: 8 },
+  input: { fontFamily: fonts.wordmark, fontSize: 14.5, color: colors.ink, minHeight: 40, textAlignVertical: 'top', padding: 0 },
   footer: { marginTop: 12 },
   notNowButton: { paddingVertical: 16, alignItems: 'center' },
-  notNowText: { color: colors.textTertiary, fontSize: 14, fontWeight: '600' },
+  notNowText: { fontFamily: fonts.wordmark, color: colors.textTertiary, fontSize: 14, fontWeight: '600' },
 });

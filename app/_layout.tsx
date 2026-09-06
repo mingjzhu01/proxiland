@@ -117,7 +117,10 @@ function RootNavigation() {
         {/* headerShown: false — the screen renders its own full-bleed brand-colored header
             with a custom back chevron and menu, per the visual redesign. */}
         <Stack.Screen name="event/[id]/index" options={{ headerShown: false }} />
-        <Stack.Screen name="event/[id]/intent" options={{ headerShown: true, title: 'Your Intent' }} />
+        <Stack.Screen
+          name="event/[id]/intent"
+          options={{ headerShown: true, title: 'Your Intent', headerBackTitle: 'Event' }}
+        />
       </Stack>
       {/* Only mount the splash's actual text/logo once fonts are ready — mounting it earlier
           and letting the font "swap in" later doesn't work: once iOS paints a Text with the
