@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet, Alert, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { goVisible, goInvisible, getMyActiveVisibility } from '../lib/api/visibility';
 import { DurationPicker } from './DurationPicker';
-import { colors, radii } from '../lib/theme';
+import { colors, radii, fonts } from '../lib/theme';
 
 const DEFAULT_DURATION_HOURS = 4;
 
@@ -112,13 +112,13 @@ const styles = StyleSheet.create({
   sheet: { backgroundColor: colors.paper, borderTopLeftRadius: radii.sheet, borderTopRightRadius: radii.sheet, padding: 20, paddingBottom: 36 },
   grabHandle: { width: 38, height: 4, borderRadius: 2, backgroundColor: colors.dashedBorder, alignSelf: 'center', marginBottom: 16 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
-  title: { fontSize: 18, fontWeight: '700', color: colors.ink },
-  prompt: { fontSize: 14, color: colors.textSecondary, marginBottom: 14, textAlign: 'center' },
+  title: { fontFamily: fonts.wordmark, fontSize: 18, fontWeight: '700', color: colors.ink },
+  prompt: { fontFamily: fonts.wordmark, fontSize: 14, color: colors.textSecondary, marginBottom: 14, textAlign: 'center' },
   goButton: { backgroundColor: colors.ink, borderRadius: radii.button, paddingVertical: 14, alignItems: 'center', marginTop: 14 },
-  goButtonText: { color: colors.inkOn, fontSize: 15, fontWeight: '600' },
+  goButtonText: { fontFamily: fonts.wordmark, color: colors.inkOn, fontSize: 15, fontWeight: '600' },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.live },
-  statusText: { fontSize: 15, fontWeight: '600', color: colors.ink, flex: 1 },
+  statusText: { fontFamily: fonts.wordmark, fontSize: 15, fontWeight: '600', color: colors.ink, flex: 1 },
   stopButton: { alignSelf: 'flex-start', marginTop: 14 },
-  stopButtonText: { color: colors.error, fontSize: 14, fontWeight: '600' },
+  stopButtonText: { fontFamily: fonts.wordmark, color: colors.error, fontSize: 14, fontWeight: '600' },
 });

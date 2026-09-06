@@ -21,7 +21,7 @@ import { useMessagesBadge } from '../../lib/messagesBadge';
 import { ReportSheet } from '../../components/ReportSheet';
 import { LetteredAvatar } from '../../components/LetteredAvatar';
 import { WhyYouTwo } from '../../components/WhyYouTwo';
-import { colors, avatarSizes, spacing, radii } from '../../lib/theme';
+import { colors, avatarSizes, spacing, radii, fonts } from '../../lib/theme';
 
 export default function Chat() {
   const { connectionId } = useLocalSearchParams<{ connectionId: string }>();
@@ -208,8 +208,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paper,
   },
   headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  headerName: { fontSize: 15.5, fontWeight: '600', color: colors.ink },
-  headerRole: { fontSize: 11.5, color: colors.textMuted, marginTop: 1 },
+  headerName: { fontFamily: fonts.wordmark, fontSize: 15.5, fontWeight: '600', color: colors.ink },
+  headerRole: { fontFamily: fonts.wordmark, fontSize: 11.5, color: colors.textMuted, marginTop: 1 },
   messageList: { flex: 1 },
   list: { padding: spacing.gutter, gap: 9, flexGrow: 1 },
   originCard: {
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 16,
   },
-  empty: { textAlign: 'center', color: colors.textMuted, fontSize: 14, marginTop: 40 },
+  empty: { fontFamily: fonts.wordmark, textAlign: 'center', color: colors.textMuted, fontSize: 14, marginTop: 40 },
   bubble: { maxWidth: '78%', paddingHorizontal: 14, paddingVertical: 10 },
   bubbleMine: { backgroundColor: colors.ink, alignSelf: 'flex-end', borderRadius: 16, borderBottomRightRadius: 5 },
   bubbleTheirs: {
@@ -231,8 +231,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderBottomLeftRadius: 5,
   },
-  bubbleTextMine: { color: colors.inkOn, fontSize: 15, lineHeight: 21 },
-  bubbleTextTheirs: { color: colors.ink, fontSize: 15, lineHeight: 21 },
+  bubbleTextMine: { fontFamily: fonts.wordmark, color: colors.inkOn, fontSize: 15, lineHeight: 21 },
+  bubbleTextTheirs: { fontFamily: fonts.wordmark, color: colors.ink, fontSize: 15, lineHeight: 21 },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: colors.rule,
   },
-  input: {
+  input: { fontFamily: fonts.wordmark,
     flex: 1,
     backgroundColor: colors.surface,
     borderWidth: 1,

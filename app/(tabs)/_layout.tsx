@@ -5,7 +5,7 @@ import { useRequestsBadge } from '../../lib/requestsBadge';
 import { useMessagesBadge } from '../../lib/messagesBadge';
 import { logSessionEvent } from '../../lib/api/instrumentation';
 import { IntentStatePrompt } from '../../components/IntentStatePrompt';
-import { colors } from '../../lib/theme';
+import { colors, fonts } from '../../lib/theme';
 
 export default function TabsLayout() {
   const { pendingCount } = useRequestsBadge();
@@ -31,7 +31,7 @@ export default function TabsLayout() {
             borderTopWidth: 1,
             paddingTop: 9,
           },
-          tabBarLabelStyle: { fontSize: 9.5, fontWeight: '600' },
+          tabBarLabelStyle: { fontFamily: fonts.wordmark, fontSize: 9.5, fontWeight: '600' },
           tabBarBadgeStyle: { backgroundColor: colors.brass, color: colors.inkOn },
         }}
       >

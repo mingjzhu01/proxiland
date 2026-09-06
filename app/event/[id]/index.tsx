@@ -11,7 +11,7 @@ import { getMyConnections } from '../../../lib/api/connections';
 import { EVENT_INTENT_DEFAULTS } from '../../../lib/eventIntentConfig';
 import { logSessionEvent } from '../../../lib/api/instrumentation';
 import { ROLE_CATEGORY_LABELS } from '../../../lib/allowedValues';
-import { colors, avatarSizes, typeStyles, spacing, radii } from '../../../lib/theme';
+import { colors, avatarSizes, typeStyles, spacing, radii, fonts } from '../../../lib/theme';
 import {
   getMyActiveEvents,
   getEventAttendees,
@@ -363,12 +363,12 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paperEvent },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: colors.paperEvent },
   body: { flex: 1 },
-  notMemberText: { fontSize: 14, color: colors.textTertiary, textAlign: 'center' },
+  notMemberText: { fontFamily: fonts.wordmark, fontSize: 14, color: colors.textTertiary, textAlign: 'center' },
   header: { backgroundColor: colors.brand, paddingHorizontal: spacing.gutter, paddingTop: 8, paddingBottom: 18 },
   headerTopRow: { flexDirection: 'row', alignItems: 'center' },
   spacer: { flex: 1 },
   eventName: { ...typeStyles.eventTitle, marginTop: 10 },
-  eventMeta: { fontSize: 12.5, color: 'rgba(245,239,230,.66)', marginTop: 4 },
+  eventMeta: { fontFamily: fonts.wordmark, fontSize: 12.5, color: 'rgba(245,239,230,.66)', marginTop: 4 },
   editButton: {
     backgroundColor: colors.paper,
     borderRadius: radii.button,
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 14,
   },
-  editButtonText: { color: colors.ink, fontSize: 14, fontWeight: '600' },
+  editButtonText: { fontFamily: fonts.wordmark, color: colors.ink, fontSize: 14, fontWeight: '600' },
   segmentBand: {
     paddingHorizontal: spacing.gutter,
     paddingVertical: 14,
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
     borderColor: '#EADFCD',
     backgroundColor: colors.paperEvent,
   },
-  explainer: { fontSize: 12.5, color: colors.textTertiary, paddingHorizontal: spacing.gutter, paddingTop: 14, paddingBottom: 4 },
+  explainer: { fontFamily: fonts.wordmark, fontSize: 12.5, color: colors.textTertiary, paddingHorizontal: spacing.gutter, paddingTop: 14, paddingBottom: 4 },
   emptyCard: {
     marginHorizontal: spacing.gutter,
     marginTop: 14,
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.card,
     padding: 16,
   },
-  emptyCardText: { fontSize: 13, color: colors.textTertiary },
+  emptyCardText: { fontFamily: fonts.wordmark, fontSize: 13, color: colors.textTertiary },
   searchField: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -407,18 +407,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
   },
-  searchInput: { flex: 1, fontSize: 14, color: colors.ink },
+  searchInput: { fontFamily: fonts.wordmark, flex: 1, fontSize: 14, color: colors.ink },
   groupLabel: { marginHorizontal: spacing.gutter, marginTop: 20, marginBottom: 8 },
   rowGroup: { marginHorizontal: spacing.gutter, borderTopWidth: 1, borderColor: colors.ruleInner },
   attendeeRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderColor: colors.ruleInner },
   attendeeInfo: { flex: 1, gap: 1 },
-  attendeeName: { fontSize: 15.5, fontWeight: '600', color: colors.ink },
-  attendeeSubtitle: { fontSize: 12.5, color: colors.textSecondary },
-  topMatchBadge: { fontSize: 10.5, color: colors.brass, fontWeight: '600', marginTop: 1 },
+  attendeeName: { fontFamily: fonts.wordmark, fontSize: 15.5, fontWeight: '600', color: colors.ink },
+  attendeeSubtitle: { fontFamily: fonts.wordmark, fontSize: 12.5, color: colors.textSecondary },
+  topMatchBadge: { fontFamily: fonts.wordmark, fontSize: 10.5, color: colors.brass, fontWeight: '600', marginTop: 1 },
   statusPill: { borderRadius: radii.pill, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: colors.ink },
   statusPillConnected: { backgroundColor: colors.liveChipBg },
   statusPillRequested: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.rule },
-  statusPillText: { fontSize: 12, fontWeight: '600', color: colors.inkOn },
+  statusPillText: { fontFamily: fonts.wordmark, fontSize: 12, fontWeight: '600', color: colors.inkOn },
   statusPillTextConnected: { color: colors.liveChipText },
   statusPillTextRequested: { color: colors.textMuted },
 });

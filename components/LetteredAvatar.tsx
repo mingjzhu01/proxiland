@@ -20,7 +20,7 @@ export function LetteredAvatar({ name, photoUrl, size }: Props) {
   const initial = (name?.trim()?.[0] ?? '?').toUpperCase();
   return (
     <View style={[styles.circle, dimensionStyle]}>
-      <Text style={[styles.letter, { fontSize: size * 0.4 }]}>{initial}</Text>
+      <Text style={[styles.letter, { fontFamily: fonts.wordmark, fontSize: size * 0.4 }]}>{initial}</Text>
     </View>
   );
 }

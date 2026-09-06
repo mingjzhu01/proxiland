@@ -17,7 +17,7 @@ import { VisibilityToggle } from '../../components/VisibilityToggle';
 import { getMyActiveVisibility } from '../../lib/api/visibility';
 import { getMyConnections } from '../../lib/api/connections';
 import { getCurrentCoords } from '../../lib/location';
-import { colors, avatarSizes, typeStyles, spacing, radii } from '../../lib/theme';
+import { colors, avatarSizes, typeStyles, spacing, radii, fonts } from '../../lib/theme';
 import {
   getOrCreateGeoScope,
   getAggregateView,
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
   topRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   spacer: { flex: 1 },
   demoPill: { backgroundColor: colors.brass, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
-  demoPillText: { color: colors.inkOn, fontSize: 11, fontWeight: '700' },
+  demoPillText: { fontFamily: fonts.wordmark, color: colors.inkOn, fontSize: 11, fontWeight: '700' },
   visibilityPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   liveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.live },
-  visibilityPillText: { fontSize: 12, fontWeight: '600', color: colors.ink },
+  visibilityPillText: { fontFamily: fonts.wordmark, fontSize: 12, fontWeight: '600', color: colors.ink },
   scanButton: {
     width: 34,
     height: 34,
@@ -463,8 +463,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   eventBannerText: { flex: 1 },
-  eventBannerTitle: { fontSize: 13.5, fontWeight: '600', color: colors.inkOn },
-  eventBannerSubtitle: { fontSize: 11.5, color: 'rgba(245,239,230,.6)', marginTop: 1 },
+  eventBannerTitle: { fontFamily: fonts.wordmark, fontSize: 13.5, fontWeight: '600', color: colors.inkOn },
+  eventBannerSubtitle: { fontFamily: fonts.wordmark, fontSize: 11.5, color: 'rgba(245,239,230,.6)', marginTop: 1 },
   incompleteBanner: {
     backgroundColor: colors.surfaceSunken,
     borderRadius: 10,
@@ -473,8 +473,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.rule,
   },
-  incompleteBannerText: { fontSize: 12, color: colors.brass },
-  empty: { padding: 24, textAlign: 'center', color: colors.textMuted, fontSize: 14 },
+  incompleteBannerText: { fontFamily: fonts.wordmark, fontSize: 12, color: colors.brass },
+  empty: { fontFamily: fonts.wordmark, padding: 24, textAlign: 'center', color: colors.textMuted, fontSize: 14 },
   sectionHeader: { marginHorizontal: spacing.gutter, marginTop: 22, marginBottom: 10 },
   wantsCard: { marginHorizontal: spacing.gutter, marginVertical: 6, gap: 12 },
   wantsRow: { flexDirection: 'row', gap: 12 },

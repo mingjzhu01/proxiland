@@ -3,6 +3,7 @@ import { View, Text, FlatList, Pressable, StyleSheet, Alert } from 'react-native
 import { useFocusEffect } from 'expo-router';
 import { getBlockedUsers, unblockUser } from '../lib/api/connections';
 import type { Profile } from '../lib/types';
+import { fonts } from '../lib/theme';
 
 export default function BlockedUsers() {
   const [blocked, setBlocked] = useState<Profile[]>([]);
@@ -58,7 +59,7 @@ export default function BlockedUsers() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  empty: { padding: 24, textAlign: 'center', color: '#888', fontSize: 14 },
+  empty: { fontFamily: fonts.wordmark, padding: 24, textAlign: 'center', color: '#888', fontSize: 14 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -67,7 +68,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#eee',
   },
-  name: { fontSize: 16, fontWeight: '600' },
+  name: { fontFamily: fonts.wordmark, fontSize: 16, fontWeight: '600' },
   unblockButton: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#eee' },
-  unblockText: { color: '#555', fontSize: 13, fontWeight: '600' },
+  unblockText: { fontFamily: fonts.wordmark, color: '#555', fontSize: 13, fontWeight: '600' },
 });

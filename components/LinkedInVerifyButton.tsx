@@ -2,6 +2,7 @@ import { Pressable, Text, StyleSheet, Alert } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { verifyLinkedInCode } from '../lib/api/linkedin';
+import { fonts } from '../lib/theme';
 
 // LinkedIn only accepts http/https redirect URLs, not custom app schemes.
 // So the OAuth redirect_uri sent to LinkedIn is a small HTTPS bridge page
@@ -65,5 +66,5 @@ export function LinkedInVerifyButton({ onVerified }: { onVerified: () => void })
 
 const styles = StyleSheet.create({
   button: { backgroundColor: '#0A66C2', borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  buttonText: { fontFamily: fonts.wordmark, color: '#fff', fontWeight: '600', fontSize: 14 },
 });

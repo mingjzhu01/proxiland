@@ -11,7 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { reportUser, blockUser, type ReportContext, type ReportReason } from '../lib/api/connections';
-import { colors, radii } from '../lib/theme';
+import { colors, radii, fonts } from '../lib/theme';
 
 const REASONS: { value: ReportReason; label: string }[] = [
   { value: 'impersonation', label: 'Impersonation' },
@@ -146,8 +146,8 @@ export function ReportSheet({
 const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(36,28,22,.42)' },
   sheet: { backgroundColor: colors.paper, borderTopLeftRadius: radii.sheet, borderTopRightRadius: radii.sheet, padding: 20, paddingBottom: 32 },
-  title: { fontSize: 18, fontWeight: '700', color: colors.ink, marginBottom: 4 },
-  subtitle: { fontSize: 14, color: colors.textSecondary, marginBottom: 16 },
+  title: { fontFamily: fonts.wordmark, fontSize: 18, fontWeight: '700', color: colors.ink, marginBottom: 4 },
+  subtitle: { fontFamily: fonts.wordmark, fontSize: 14, color: colors.textSecondary, marginBottom: 16 },
   reasonList: { gap: 4, marginBottom: 12 },
   reasonRow: {
     flexDirection: 'row',
@@ -160,8 +160,8 @@ const styles = StyleSheet.create({
   reasonRowSelected: { backgroundColor: colors.surfaceSunken },
   radio: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: colors.dashedBorder },
   radioSelected: { borderColor: colors.brand, backgroundColor: colors.brand },
-  reasonLabel: { fontSize: 15, color: colors.ink },
-  detailsInput: {
+  reasonLabel: { fontFamily: fonts.wordmark, fontSize: 15, color: colors.ink },
+  detailsInput: { fontFamily: fonts.wordmark,
     borderWidth: 1,
     borderColor: colors.rule,
     borderRadius: 10,
@@ -175,9 +175,9 @@ const styles = StyleSheet.create({
   },
   buttonRow: { flexDirection: 'row', gap: 10 },
   cancelButton: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 20, backgroundColor: colors.neutralChipBg },
-  cancelButtonText: { color: colors.textSecondary, fontSize: 15, fontWeight: '600' },
+  cancelButtonText: { fontFamily: fonts.wordmark, color: colors.textSecondary, fontSize: 15, fontWeight: '600' },
   submitButton: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 20, backgroundColor: colors.ink },
-  submitButtonText: { color: colors.inkOn, fontSize: 15, fontWeight: '600' },
+  submitButtonText: { fontFamily: fonts.wordmark, color: colors.inkOn, fontSize: 15, fontWeight: '600' },
   buttonDisabled: { opacity: 0.5 },
   blockButton: {
     paddingVertical: 12,
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     borderColor: colors.rule,
     marginBottom: 10,
   },
-  blockButtonText: { color: colors.ink, fontSize: 15, fontWeight: '600' },
+  blockButtonText: { fontFamily: fonts.wordmark, color: colors.ink, fontSize: 15, fontWeight: '600' },
   doneButton: { paddingVertical: 12, alignItems: 'center', borderRadius: 20, backgroundColor: colors.ink },
-  doneButtonText: { color: colors.inkOn, fontSize: 15, fontWeight: '600' },
+  doneButtonText: { fontFamily: fonts.wordmark, color: colors.inkOn, fontSize: 15, fontWeight: '600' },
 });

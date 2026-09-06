@@ -3,7 +3,7 @@ import { View, Text, Pressable, StyleSheet, Modal, ScrollView } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { groupedOptions, type IntentOptionType } from '../lib/eventIntentOptions';
 import { EVENT_INTENT_DEFAULTS } from '../lib/eventIntentConfig';
-import { colors, radii, typeStyles } from '../lib/theme';
+import { colors, radii, typeStyles, fonts } from '../lib/theme';
 import { PrimaryButton } from './Buttons';
 import { SectionLabel } from './SectionLabel';
 
@@ -128,8 +128,8 @@ const styles = StyleSheet.create({
   },
   headerText: { flex: 1 },
   title: { ...typeStyles.screenHeadline, fontSize: 24, lineHeight: 28 },
-  subtitle: { fontSize: 12.5, color: colors.textTertiary, marginTop: 4 },
-  limitMessage: { fontSize: 12, color: colors.brass, paddingHorizontal: 20, paddingTop: 10 },
+  subtitle: { fontFamily: fonts.wordmark, fontSize: 12.5, color: colors.textTertiary, marginTop: 4 },
+  limitMessage: { fontFamily: fonts.wordmark, fontSize: 12, color: colors.brass, paddingHorizontal: 20, paddingTop: 10 },
   scroll: { paddingHorizontal: 20 },
   group: { marginTop: 18 },
   groupLabel: { marginBottom: 8 },
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     borderColor: colors.rule,
   },
   optionRowSelected: { backgroundColor: colors.ink, borderColor: colors.ink },
-  optionLabel: { fontSize: 15, fontWeight: '500', color: colors.ink, flexShrink: 1 },
+  optionLabel: { fontFamily: fonts.wordmark, fontSize: 15, fontWeight: '500', color: colors.ink, flexShrink: 1 },
   optionLabelSelected: { color: colors.inkOn },
   checkbox: {
     width: 20,

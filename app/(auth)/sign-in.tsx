@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Alert } from 'react-native';
 import { Link } from 'expo-router';
 import { supabase } from '../../lib/supabase';
+import { fonts } from '../../lib/theme';
 
 export default function SignIn() {
   const [email, setEmail] = useState('');
@@ -53,9 +54,9 @@ export default function SignIn() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', padding: 24, gap: 12 },
-  title: { fontSize: 32, fontWeight: '700', textAlign: 'center' },
-  subtitle: { fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 24 },
-  input: {
+  title: { fontFamily: fonts.wordmark, fontSize: 32, fontWeight: '700', textAlign: 'center' },
+  subtitle: { fontFamily: fonts.wordmark, fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 24 },
+  input: { fontFamily: fonts.wordmark,
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
@@ -70,6 +71,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  buttonText: { fontFamily: fonts.wordmark, color: '#fff', fontSize: 16, fontWeight: '600' },
   link: { textAlign: 'center', marginTop: 16, color: '#0066cc' },
 });

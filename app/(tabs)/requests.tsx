@@ -11,7 +11,7 @@ import { LetteredAvatar } from '../../components/LetteredAvatar';
 import { SectionLabel } from '../../components/SectionLabel';
 import { SegmentedControl, type Segment } from '../../components/SegmentedControl';
 import { PrimaryButton, SecondaryButton } from '../../components/Buttons';
-import { colors, avatarSizes, typeStyles, spacing } from '../../lib/theme';
+import { colors, avatarSizes, typeStyles, spacing, fonts } from '../../lib/theme';
 import type { ConnectionRequest } from '../../lib/types';
 
 function formatMeetingTime(meetingAt: string | null): string | null {
@@ -229,13 +229,13 @@ const styles = StyleSheet.create({
   headRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   headInfo: { flex: 1, gap: 2 },
   askedBadge: { backgroundColor: colors.brassChipBg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
-  askedBadgeText: { fontSize: 11, fontWeight: '600', color: colors.brassChipText },
+  askedBadgeText: { fontFamily: fonts.wordmark, fontSize: 11, fontWeight: '600', color: colors.brassChipText },
   coffeeBadge: { backgroundColor: colors.liveChipBg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
-  coffeeBadgeText: { fontSize: 11, fontWeight: '600', color: colors.liveChipText },
+  coffeeBadgeText: { fontFamily: fonts.wordmark, fontSize: 11, fontWeight: '600', color: colors.liveChipText },
   divider: { height: 1, backgroundColor: colors.ruleInner, marginVertical: 14 },
   whyLabel: { marginBottom: 8 },
   revealLine: { ...typeStyles.matchRationaleChat, marginBottom: 10 },
-  explainer: { fontSize: 12, color: colors.textTertiary, marginBottom: 14, lineHeight: 17 },
+  explainer: { fontFamily: fonts.wordmark, fontSize: 12, color: colors.textTertiary, marginBottom: 14, lineHeight: 17 },
   buttonRow: { flexDirection: 'row', gap: 10, marginTop: 4 },
   flex1: { flex: 1 },
   meetingBlock: {
@@ -247,10 +247,10 @@ const styles = StyleSheet.create({
     marginTop: 12,
     gap: 4,
   },
-  meetingLine: { fontSize: 13.5, color: colors.textSecondary },
-  messageQuote: { fontSize: 14, color: colors.ink, fontStyle: 'italic', marginTop: 12 },
-  empty: { paddingHorizontal: spacing.gutter, paddingBottom: 16, color: colors.textMuted, fontSize: 14 },
-  hint: { paddingHorizontal: spacing.gutter, paddingBottom: 12, color: colors.textMuted, fontSize: 11 },
+  meetingLine: { fontFamily: fonts.wordmark, fontSize: 13.5, color: colors.textSecondary },
+  messageQuote: { fontFamily: fonts.wordmark, fontSize: 14, color: colors.ink, fontStyle: 'italic', marginTop: 12 },
+  empty: { fontFamily: fonts.wordmark, paddingHorizontal: spacing.gutter, paddingBottom: 16, color: colors.textMuted, fontSize: 14 },
+  hint: { fontFamily: fonts.wordmark, paddingHorizontal: spacing.gutter, paddingBottom: 12, color: colors.textMuted, fontSize: 11 },
   sentRow: {
     flexDirection: 'row',
     alignItems: 'center',

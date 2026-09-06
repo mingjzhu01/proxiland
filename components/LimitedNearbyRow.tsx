@@ -1,4 +1,5 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { fonts } from '../lib/theme';
 
 type Props = {
   headline?: string | null;
@@ -36,8 +37,8 @@ const styles = StyleSheet.create({
   },
   avatar: { width: 56, height: 56, borderRadius: 28 },
   avatarPlaceholder: { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' },
-  lockIcon: { fontSize: 18 },
+  lockIcon: { fontFamily: fonts.wordmark, fontSize: 18 },
   info: { flex: 1 },
-  headline: { fontSize: 15, color: '#333', fontWeight: '600' },
-  distance: { fontSize: 12, color: '#999', marginTop: 2 },
+  headline: { fontFamily: fonts.wordmark, fontSize: 15, color: '#333', fontWeight: '600' },
+  distance: { fontFamily: fonts.wordmark, fontSize: 12, color: '#999', marginTop: 2 },
 });

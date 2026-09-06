@@ -5,7 +5,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../lib/supabase';
-import { colors, spacing } from '../lib/theme';
+import { colors, spacing, fonts } from '../lib/theme';
 
 function SettingsRow({
   icon,
@@ -65,6 +65,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.gutter,
     paddingVertical: 14,
   },
-  rowLabel: { flex: 1, fontSize: 15, color: colors.ink, fontWeight: '500' },
+  rowLabel: { fontFamily: fonts.wordmark, flex: 1, fontSize: 15, color: colors.ink, fontWeight: '500' },
   rowLabelDanger: { color: colors.error },
 });

@@ -1,7 +1,7 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { formatEducation } from '../lib/formatEducation';
 import { LetteredAvatar } from './LetteredAvatar';
-import { colors, avatarSizes } from '../lib/theme';
+import { colors, avatarSizes, fonts } from '../lib/theme';
 
 type Props = {
   name: string;
@@ -83,8 +83,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   info: { flex: 1 },
-  name: { fontSize: 16, fontWeight: '600', color: colors.ink, letterSpacing: -0.16 },
-  subtitle: { fontSize: 13.5, color: colors.textSecondary, marginTop: 1 },
-  tertiary: { fontSize: 12.5, color: colors.textMuted, marginTop: 1 },
-  distance: { fontSize: 12, color: colors.brass, marginTop: 2, fontWeight: '600' },
+  name: { fontFamily: fonts.wordmark, fontSize: 16, fontWeight: '600', color: colors.ink, letterSpacing: -0.16 },
+  subtitle: { fontFamily: fonts.wordmark, fontSize: 13.5, color: colors.textSecondary, marginTop: 1 },
+  tertiary: { fontFamily: fonts.wordmark, fontSize: 12.5, color: colors.textMuted, marginTop: 1 },
+  distance: { fontFamily: fonts.wordmark, fontSize: 12, color: colors.brass, marginTop: 2, fontWeight: '600' },
 });

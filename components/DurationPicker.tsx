@@ -9,6 +9,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
+import { fonts } from '../lib/theme';
 
 const ITEM_HEIGHT = 44;
 const VISIBLE_HEIGHT = 3 * ITEM_HEIGHT;
@@ -80,7 +81,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#111',
   },
   item: { height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' },
-  itemText: { fontSize: 17, color: '#999' },
+  itemText: { fontFamily: fonts.wordmark, fontSize: 17, color: '#999' },
   itemTextSelected: { color: '#fff', fontWeight: '700' },
-  valueLabel: { fontSize: 15, fontWeight: '700', color: '#111' },
+  valueLabel: { fontFamily: fonts.wordmark, fontSize: 15, fontWeight: '700', color: '#111' },
 });

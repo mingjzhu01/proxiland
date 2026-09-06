@@ -5,7 +5,7 @@ import { LetteredAvatar } from './LetteredAvatar';
 import { WhyYouTwo } from './WhyYouTwo';
 import { PrimaryButton, ResolvedButton } from './Buttons';
 import { formatEducation } from '../lib/formatEducation';
-import { colors, avatarSizes, typeStyles } from '../lib/theme';
+import { colors, avatarSizes, typeStyles, fonts } from '../lib/theme';
 
 type Props = {
   name: string;
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   headRow: { flexDirection: 'row', gap: 12 },
   info: { flex: 1, gap: 2 },
   actionRow: { marginTop: 14 },
-  connectedHint: { fontSize: 11, color: colors.textMuted, marginBottom: 8 },
+  connectedHint: { fontFamily: fonts.wordmark, fontSize: 11, color: colors.textMuted, marginBottom: 8 },
   buttonRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
   connectFlex: { flex: 1 },
   iconButton: {

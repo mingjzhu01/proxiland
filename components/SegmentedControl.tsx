@@ -1,5 +1,5 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { colors, radii, shadows } from '../lib/theme';
+import { colors, radii, shadows, fonts } from '../lib/theme';
 
 export type Segment = { key: string; label: string; count?: number };
 
@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.segmentedInner,
   },
   segmentActive: { backgroundColor: colors.surface, ...shadows.segmentActive },
-  label: { fontSize: 12.5, fontWeight: '600' },
+  label: { fontFamily: fonts.wordmark, fontSize: 12.5, fontWeight: '600' },
   labelActive: { color: colors.ink },
   labelInactive: { color: colors.textTertiary },
   countActive: { color: colors.brass },

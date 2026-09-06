@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator 
 import { useRouter } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { deleteAccount } from '../lib/api/account';
+import { fonts } from '../lib/theme';
 
 export default function DeleteAccount() {
   const router = useRouter();
@@ -82,10 +83,10 @@ export default function DeleteAccount() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', padding: 24 },
-  title: { fontSize: 22, fontWeight: '700', marginTop: 12, marginBottom: 12 },
-  warning: { fontSize: 15, color: '#333', lineHeight: 22, marginBottom: 28 },
-  label: { fontSize: 13, fontWeight: '600', color: '#666', marginBottom: 8 },
-  input: {
+  title: { fontFamily: fonts.wordmark, fontSize: 22, fontWeight: '700', marginTop: 12, marginBottom: 12 },
+  warning: { fontFamily: fonts.wordmark, fontSize: 15, color: '#333', lineHeight: 22, marginBottom: 28 },
+  label: { fontFamily: fonts.wordmark, fontSize: 13, fontWeight: '600', color: '#666', marginBottom: 8 },
+  input: { fontFamily: fonts.wordmark,
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 10,
@@ -99,8 +100,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
   },
-  deleteButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  deleteButtonText: { fontFamily: fonts.wordmark, color: '#fff', fontSize: 16, fontWeight: '700' },
   buttonDisabled: { opacity: 0.4 },
   cancelButton: { paddingVertical: 16, alignItems: 'center' },
-  cancelButtonText: { color: '#666', fontSize: 15, fontWeight: '600' },
+  cancelButtonText: { fontFamily: fonts.wordmark, color: '#666', fontSize: 15, fontWeight: '600' },
 });

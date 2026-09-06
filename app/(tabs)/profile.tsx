@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   spacer: { flex: 1 },
   identityBlock: { alignItems: 'center', marginTop: 12, gap: 4 },
   name: { ...typeStyles.screenHeadline, fontSize: 26, marginTop: 8 },
-  subtitle: { fontSize: 13.5, color: colors.textSecondary },
+  subtitle: { fontFamily: fonts.wordmark, fontSize: 13.5, color: colors.textSecondary },
   verifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     marginTop: 6,
   },
-  verifiedBadgeText: { fontSize: 11, fontWeight: '600', color: colors.liveChipText },
+  verifiedBadgeText: { fontFamily: fonts.wordmark, fontSize: 11, fontWeight: '600', color: colors.liveChipText },
   verifyChip: {
     borderWidth: 1,
     borderColor: colors.rule,
@@ -230,11 +230,11 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     marginTop: 6,
   },
-  verifyChipText: { fontSize: 11.5, fontWeight: '600', color: colors.textSecondary },
+  verifyChipText: { fontFamily: fonts.wordmark, fontSize: 11.5, fontWeight: '600', color: colors.textSecondary },
   visibilityCard: { backgroundColor: colors.brand, borderRadius: radii.card, padding: 17, marginTop: 22 },
   visibilityTopRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   visibilityTextWrap: { flex: 1, gap: 4 },
-  visibilityState: { fontSize: 15, fontWeight: '600', color: colors.inkOn },
+  visibilityState: { fontFamily: fonts.wordmark, fontSize: 15, fontWeight: '600', color: colors.inkOn },
   visibilityDivider: { height: 1, backgroundColor: 'rgba(245,239,230,.16)', marginVertical: 14 },
   previewRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   previewScale: { transform: [{ scale: 0.85 }], marginLeft: -6 },
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   detailRow: { paddingVertical: 13 },
   detailRowDivider: { borderBottomWidth: 1, borderColor: colors.ruleInner },
   detailLabel: { fontFamily: fonts.wordmark, fontSize: 10, textTransform: 'uppercase', letterSpacing: 1.4, color: colors.textMuted, marginBottom: 4 },
-  detailValue: { fontSize: 15, color: colors.ink },
+  detailValue: { fontFamily: fonts.wordmark, fontSize: 15, color: colors.ink },
   buttonDisabled: { opacity: 0.5 },
   securityBanner: {
     backgroundColor: colors.surfaceSunken,
@@ -263,8 +263,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.rule,
   },
-  securityBannerTitle: { fontSize: 14, fontWeight: '700', color: colors.brass },
-  securityBannerText: { fontSize: 13, color: colors.textTertiary, marginTop: 4 },
+  securityBannerTitle: { fontFamily: fonts.wordmark, fontSize: 14, fontWeight: '700', color: colors.brass },
+  securityBannerText: { fontFamily: fonts.wordmark, fontSize: 13, color: colors.textTertiary, marginTop: 4 },
   securityBannerButton: {
     backgroundColor: colors.brass,
     borderRadius: 8,
@@ -272,5 +272,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 10,
   },
-  securityBannerButtonText: { color: colors.inkOn, fontSize: 13, fontWeight: '600' },
+  securityBannerButtonText: { fontFamily: fonts.wordmark, color: colors.inkOn, fontSize: 13, fontWeight: '600' },
 });

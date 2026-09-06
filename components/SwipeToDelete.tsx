@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { Animated, Pressable, Text, StyleSheet } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
+import { fonts } from '../lib/theme';
 
 const DELETE_WIDTH = 80;
 
@@ -49,5 +50,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  deleteText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  deleteText: { fontFamily: fonts.wordmark, color: '#fff', fontWeight: '700', fontSize: 13 },
 });
