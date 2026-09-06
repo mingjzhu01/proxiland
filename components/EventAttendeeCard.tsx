@@ -38,7 +38,7 @@ export function EventAttendeeCard({ attendee, status, onPress, onConnect, reason
         </View>
       </Pressable>
 
-      {reason ? <WhyYouTwo reason={reason} /> : null}
+      {reason ? <WhyYouTwo reason={reason} dense /> : null}
 
       <View style={styles.actionRow}>
         {status === 'connected' ? (

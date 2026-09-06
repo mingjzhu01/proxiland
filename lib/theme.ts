@@ -17,6 +17,9 @@ export const colors = {
   rule: '#E4DACB',
   ruleInner: '#EFE7DA',
   brass: '#8A6A2F',
+  // A denser/darker brass for small type that needs to read clearly at a glance (e.g. the
+  // "WHY YOU TWO" label on match cards) — `brass` alone is too light for that at 10px.
+  brassDense: '#5C4620',
   brassOnDark: '#E8C98A',
   brassChipBg: '#F1E7D4',
   brassChipText: '#7A5C26',

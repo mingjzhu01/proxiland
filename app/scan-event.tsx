@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, typeStyles, radii } from '../lib/theme';
 import { PrimaryButton } from '../components/Buttons';
 
@@ -21,6 +22,7 @@ function CornerBracket({ style }: { style: object }) {
 
 export default function ScanEvent() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [handled, setHandled] = useState(false);
 
@@ -55,7 +57,7 @@ export default function ScanEvent() {
         onBarcodeScanned={handled ? undefined : handleScanned}
       />
       <View style={styles.scrim} />
-      <Pressable style={styles.closeButton} onPress={() => router.back()} hitSlop={10}>
+      <Pressable style={[styles.closeButton, { top: insets.top + 8 }]} onPress={() => router.back()} hitSlop={10}>
         <Ionicons name="close" size={20} color={colors.inkOn} />
       </Pressable>
       <View style={styles.overlay}>

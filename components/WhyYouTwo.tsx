@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { colors, typeStyles } from '../lib/theme';
+
 import { SectionLabel } from './SectionLabel';
 
 type Props = {
@@ -10,14 +11,17 @@ type Props = {
   // colored box with small type in either case.
   variant?: 'panel' | 'plain';
   compact?: boolean;
+  // Event match cards (Top Matches / Shared Overlap) darken + bold the label so it reads
+  // clearly at a glance next to the rank badge — the default brass is too light there.
+  dense?: boolean;
 };
 
 // The system's signature block. Mono 10 brass "WHY YOU TWO" label, 8px gap, then the
 // rationale in Newsreader — 19-20px in a feed/match card, 17px in the chat banner.
-export function WhyYouTwo({ reason, variant = 'panel', compact = false }: Props) {
+export function WhyYouTwo({ reason, variant = 'panel', compact = false, dense = false }: Props) {
   return (
     <View style={variant === 'panel' ? styles.panel : styles.plain}>
-      <SectionLabel tone="brass">Why you two</SectionLabel>
+      <SectionLabel tone="brass" style={dense ? styles.denseLabel : undefined}>Why you two</SectionLabel>
       <Text style={[compact ? typeStyles.matchRationaleChat : typeStyles.matchRationale, styles.text]}>{reason}</Text>
     </View>
   );
@@ -37,4 +41,5 @@ const styles = StyleSheet.create({
     paddingTop: 14,
   },
   text: { marginTop: 8 },
+  denseLabel: { color: colors.brassDense, fontWeight: '700' },
 });

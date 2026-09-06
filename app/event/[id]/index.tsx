@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EventAttendeeCard } from '../../../components/EventAttendeeCard';
 import { SegmentedControl, type Segment } from '../../../components/SegmentedControl';
 import { LetteredAvatar } from '../../../components/LetteredAvatar';
@@ -35,6 +36,7 @@ function pluralRoleLabel(role: string | null): string {
 export default function EventScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [event, setEvent] = useState<EventSummary | null>(null);
   const [attendees, setAttendees] = useState<EventAttendee[]>([]);
   const [attendeeById, setAttendeeById] = useState<Map<string, EventAttendee>>(new Map());
@@ -76,9 +78,15 @@ export default function EventScreen() {
           matches = await getMyEventMatches(id);
         }
 
+        // Sort (and gate) by the blended `score`, not raw `intent_complement` — that
+        // deterministic number alone can be misleadingly perfect for a generic catch-all
+        // pairing (e.g. both people picking "open to relevant new connections"), even when
+        // the AI's own qualitative read of the match is weak. `score` already folds the AI's
+        // judgment in (60/40 against the deterministic signal), so it's the number that
+        // should actually decide who counts as a top match.
         const top = matches
-          .filter((m) => m.intent_complement >= EVENT_INTENT_DEFAULTS.strongIntentComplementThreshold)
-          .sort((a, b) => b.intent_complement - a.intent_complement)
+          .filter((m) => m.score >= EVENT_INTENT_DEFAULTS.strongIntentComplementThreshold)
+          .sort((a, b) => b.score - a.score)
           .slice(0, EVENT_INTENT_DEFAULTS.topMatchesLimit);
         const topIds = new Set(top.map((m) => m.candidate_user_id));
         const overlap = matches
@@ -201,12 +209,11 @@ export default function EventScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerTopRow}>
           <Pressable onPress={() => router.back()} hitSlop={10}>
             <Ionicons name="chevron-back" size={22} color="rgba(245,239,230,.78)" />
           </Pressable>
-          <SectionLabel tone="brass" style={{ color: colors.brassOnDark }}>Live event</SectionLabel>
           <View style={styles.spacer} />
           <Pressable onPress={handleMenu} hitSlop={10} disabled={isLeaving}>
             <Ionicons name="ellipsis-horizontal" size={20} color="rgba(245,239,230,.78)" />
