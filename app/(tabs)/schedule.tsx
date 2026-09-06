@@ -6,7 +6,7 @@ import { supabase } from '../../lib/supabase';
 import { SwipeToDelete } from '../../components/SwipeToDelete';
 import { SectionLabel } from '../../components/SectionLabel';
 import { SecondaryButton } from '../../components/Buttons';
-import { colors, typeStyles, spacing, radii } from '../../lib/theme';
+import { colors, typeStyles, spacing, radii, fonts } from '../../lib/theme';
 import type { ConnectionRequest } from '../../lib/types';
 
 function dayLabel(meetingAt: string | null): { key: string; label: string; isNear: boolean } {
@@ -163,8 +163,8 @@ const styles = StyleSheet.create({
   },
   cardRow: { flexDirection: 'row', alignItems: 'center', padding: 16 },
   timeColumn: { width: 54, alignItems: 'center' },
-  timeNumber: { fontFamily: 'Newsreader_400Regular', fontSize: 25, color: colors.ink },
-  timePeriod: { fontFamily: 'monospace', fontSize: 10, color: colors.textMuted, marginTop: 2 },
+  timeNumber: { fontFamily: fonts.wordmark, fontSize: 25, color: colors.ink },
+  timePeriod: { fontFamily: fonts.wordmark, fontSize: 10, color: colors.textMuted, marginTop: 2 },
   timeDivider: { width: 1, alignSelf: 'stretch', backgroundColor: colors.ruleInner, marginHorizontal: 14 },
   info: { flex: 1, gap: 3 },
   venue: { fontSize: 13, color: colors.textTertiary },

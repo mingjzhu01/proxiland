@@ -25,7 +25,7 @@ import { ReportSheet } from '../../components/ReportSheet';
 import { LetteredAvatar } from '../../components/LetteredAvatar';
 import { WhyYouTwo } from '../../components/WhyYouTwo';
 import { PrimaryButton, SecondaryButton } from '../../components/Buttons';
-import { colors, avatarSizes, spacing, radii } from '../../lib/theme';
+import { colors, avatarSizes, spacing, radii, fonts } from '../../lib/theme';
 import type { Profile } from '../../lib/types';
 
 export default function ProfileDetail() {
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
   loadingText: { color: colors.textSecondary },
   content: { padding: spacing.gutter, alignItems: 'center' },
   identityBlock: { alignItems: 'center', gap: 4 },
-  name: { fontFamily: 'Newsreader_400Regular', fontSize: 26, color: colors.ink, marginTop: 8 },
+  name: { fontFamily: fonts.wordmark, fontSize: 26, color: colors.ink, marginTop: 8 },
   subtitle: { fontSize: 13.5, color: colors.textSecondary, textAlign: 'center' },
   verifiedBadge: {
     flexDirection: 'row',
@@ -309,14 +309,14 @@ const styles = StyleSheet.create({
   },
   detailRow: { paddingVertical: 13 },
   detailRowDivider: { borderBottomWidth: 1, borderColor: colors.ruleInner },
-  detailLabel: { fontFamily: 'monospace', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1.4, color: colors.textMuted, marginBottom: 4 },
+  detailLabel: { fontFamily: fonts.wordmark, fontSize: 10, textTransform: 'uppercase', letterSpacing: 1.4, color: colors.textMuted, marginBottom: 4 },
   detailValue: { fontSize: 15, color: colors.ink },
   buttonStack: { width: '100%', gap: 10, marginTop: 24 },
   coffeeHint: { color: colors.textMuted, fontSize: 12, marginTop: 4, textAlign: 'center' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(36,28,22,.42)', justifyContent: 'flex-end' },
   modalCard: { backgroundColor: colors.paper, borderTopLeftRadius: radii.sheet, borderTopRightRadius: radii.sheet, padding: 20, paddingBottom: 32 },
   grabHandle: { width: 38, height: 4, borderRadius: 2, backgroundColor: colors.dashedBorder, alignSelf: 'center', marginBottom: 16 },
-  modalTitle: { fontFamily: 'Newsreader_400Regular', fontSize: 24, color: colors.ink },
+  modalTitle: { fontFamily: fonts.wordmark, fontSize: 24, color: colors.ink },
   modalDivider: { height: 1, backgroundColor: colors.rule, marginTop: 16, marginBottom: 4 },
   fieldLabel: { fontSize: 13, color: colors.textTertiary, marginBottom: 4, marginTop: 14 },
   input: { borderWidth: 1, borderColor: colors.rule, borderRadius: 10, padding: 12, fontSize: 15, color: colors.ink, backgroundColor: colors.surface },

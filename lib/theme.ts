@@ -36,9 +36,11 @@ export const colors = {
 export const fonts = {
   // Loaded via useFonts() in app/_layout.tsx before the splash hides — see that file.
   wordmark: 'YesevaOne_400Regular',
-  serif: 'Newsreader_400Regular',
-  // System sans / monospace need no font family override — RN's defaults already are
-  // -apple-system / Roboto and Menlo / monospace respectively.
+  // Founder call: use Yeseva One everywhere for now, including what was previously
+  // Newsreader-only display text — an alias here (rather than rewriting every typeStyle
+  // that references `fonts.serif`) so it's a one-line change to split them again later.
+  // Newsreader_400Regular is still loaded in _layout.tsx in case that split comes back.
+  serif: 'YesevaOne_400Regular',
 } as const;
 
 export const radii = {
@@ -73,7 +75,7 @@ export const typeStyles = {
   cardTertiary: { fontSize: 12.5, color: colors.textMuted },
   anonLine: { fontSize: 16.5, fontWeight: '500' as const, lineHeight: 23, color: colors.ink },
   sectionLabel: {
-    fontFamily: 'monospace',
+    fontFamily: fonts.wordmark,
     fontSize: 10,
     textTransform: 'uppercase' as const,
     letterSpacing: 1.6,

@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getEventByQrToken, joinEvent, type EventSummary } from '../../lib/api/events';
 import { PrimaryButton } from '../../components/Buttons';
 import { Card } from '../../components/Card';
-import { colors, typeStyles, spacing, radii } from '../../lib/theme';
+import { colors, typeStyles, spacing, radii, fonts } from '../../lib/theme';
 
 type Status = 'loading' | 'found' | 'not-found' | 'joining' | 'joined';
 
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   },
   liveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.live },
   livePillText: { fontSize: 11.5, fontWeight: '600', color: colors.liveChipText },
-  eventName: { fontFamily: 'Newsreader_400Regular', fontSize: 33, lineHeight: 38, color: colors.ink },
+  eventName: { fontFamily: fonts.wordmark, fontSize: 33, lineHeight: 38, color: colors.ink },
   organizer: { fontSize: 14, color: colors.textTertiary, marginTop: 6 },
   descriptionCard: { marginTop: 20 },
   description: { fontSize: 14.5, lineHeight: 22, color: colors.ink },
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   disclosureLabel: {
-    fontFamily: 'monospace',
+    fontFamily: fonts.wordmark,
     fontSize: 10,
     textTransform: 'uppercase',
     letterSpacing: 1.6,

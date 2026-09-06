@@ -17,7 +17,7 @@ import { LetteredAvatar } from '../../components/LetteredAvatar';
 import { RedactedIdentity } from '../../components/RedactedIdentity';
 import { SectionLabel } from '../../components/SectionLabel';
 import { SecondaryButton } from '../../components/Buttons';
-import { colors, avatarSizes, typeStyles, spacing, radii } from '../../lib/theme';
+import { colors, avatarSizes, typeStyles, spacing, radii, fonts } from '../../lib/theme';
 import type { Profile } from '../../lib/types';
 
 export default function MyProfile() {
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   previewRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   previewScale: { transform: [{ scale: 0.85 }], marginLeft: -6 },
   previewLine: { ...typeStyles.matchRationaleChat, color: colors.inkOn, flex: 1 },
-  previewLineFull: { fontFamily: 'Newsreader_400Regular', fontSize: 16, color: colors.inkOn, marginTop: 10 },
+  previewLineFull: { fontFamily: fonts.wordmark, fontSize: 16, color: colors.inkOn, marginTop: 10 },
   detailsCard: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
   },
   detailRow: { paddingVertical: 13 },
   detailRowDivider: { borderBottomWidth: 1, borderColor: colors.ruleInner },
-  detailLabel: { fontFamily: 'monospace', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1.4, color: colors.textMuted, marginBottom: 4 },
+  detailLabel: { fontFamily: fonts.wordmark, fontSize: 10, textTransform: 'uppercase', letterSpacing: 1.4, color: colors.textMuted, marginBottom: 4 },
   detailValue: { fontSize: 15, color: colors.ink },
   buttonDisabled: { opacity: 0.5 },
   securityBanner: {

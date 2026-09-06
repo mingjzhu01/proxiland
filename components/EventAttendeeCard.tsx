@@ -3,7 +3,7 @@ import { Card } from './Card';
 import { LetteredAvatar } from './LetteredAvatar';
 import { WhyYouTwo } from './WhyYouTwo';
 import { PrimaryButton, ResolvedButton } from './Buttons';
-import { colors, avatarSizes, typeStyles } from '../lib/theme';
+import { colors, avatarSizes, typeStyles, fonts } from '../lib/theme';
 import type { EventAttendee } from '../lib/api/events';
 
 type ConnectStatus = 'none' | 'requested' | 'connected';
@@ -59,6 +59,6 @@ const styles = StyleSheet.create({
   info: { flex: 1, gap: 2 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   rankBadge: { backgroundColor: colors.brassChipBg, borderRadius: 999, paddingHorizontal: 7, paddingVertical: 2 },
-  rankBadgeText: { fontFamily: 'monospace', fontSize: 10, color: colors.brassChipText },
+  rankBadgeText: { fontFamily: fonts.wordmark, fontSize: 10, color: colors.brassChipText },
   actionRow: { marginTop: 14 },
 });

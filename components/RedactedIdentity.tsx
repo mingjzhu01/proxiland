@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../lib/theme';
+import { colors, fonts } from '../lib/theme';
 
 // The anon-card treatment: a redacted portrait, two redacted text bars, and a HIDDEN label.
 // Communicates concealment explicitly rather than reading as a loading skeleton.
@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
   secondaryBar: { width: 74, height: 9, borderRadius: 3, backgroundColor: colors.redactBarSub },
   hidden: {
     marginLeft: 'auto',
-    fontFamily: 'monospace',
+    fontFamily: fonts.wordmark,
     fontSize: 9.5,
     letterSpacing: 1,
     color: colors.textMuted,
