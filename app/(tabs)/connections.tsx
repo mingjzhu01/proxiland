@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { View, FlatList, Text, Pressable, TextInput, StyleSheet, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LetteredAvatar } from '../../components/LetteredAvatar';
 import { SectionLabel } from '../../components/SectionLabel';
 import { getMyConnections } from '../../lib/api/connections';
@@ -11,6 +12,7 @@ import type { Connection } from '../../lib/types';
 
 export default function Connections() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [connections, setConnections] = useState<Connection[]>([]);
   const [unreadByConnection, setUnreadByConnection] = useState<Map<string, number>>(new Map());
   const [search, setSearch] = useState('');
@@ -85,8 +87,7 @@ export default function Connections() {
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={load} tintColor={colors.brand} />}
         ListHeaderComponent={
           <>
-            <View style={styles.header}>
-              <SectionLabel tone="brass">People</SectionLabel>
+            <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
               <Text style={styles.headline}>
                 {connections.length > 0
                   ? `${connections.length} ${connections.length === 1 ? 'connection' : 'connections'}`

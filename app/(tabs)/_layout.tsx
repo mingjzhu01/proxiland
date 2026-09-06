@@ -20,6 +20,9 @@ export default function TabsLayout() {
       <IntentStatePrompt />
       <Tabs
         screenOptions={{
+          // Each tab already carries its own name via the bottom bar — no need for a second,
+          // native header repeating it at the top too.
+          headerShown: false,
           tabBarActiveTintColor: colors.brand,
           tabBarInactiveTintColor: colors.textMuted,
           tabBarStyle: {

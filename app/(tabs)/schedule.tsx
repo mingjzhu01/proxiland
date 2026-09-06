@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, Alert, Linking } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getScheduledCoffees, hideRequestForMe } from '../../lib/api/requests';
 import { supabase } from '../../lib/supabase';
 import { SwipeToDelete } from '../../components/SwipeToDelete';
@@ -31,6 +32,7 @@ function formatTime(meetingAt: string | null): { number: string; period: string 
 
 export default function Schedule() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [coffees, setCoffees] = useState<ConnectionRequest[]>([]);
   const [myId, setMyId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -80,8 +82,7 @@ export default function Schedule() {
       style={styles.container}
       refreshControl={<RefreshControl refreshing={isLoading} onRefresh={load} tintColor={colors.brand} />}
     >
-      <View style={styles.header}>
-        <SectionLabel tone="brass">Schedule</SectionLabel>
+      <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
         <Text style={styles.headline}>
           {coffees.length > 0
             ? `${coffees.length} ${coffees.length === 1 ? 'coffee' : 'coffees'} this week`

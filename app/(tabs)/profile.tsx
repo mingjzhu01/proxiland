@@ -7,6 +7,7 @@ import { useCallback, useState } from 'react';
 import { View, Text, Pressable, Switch, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { getMyProfile } from '../../lib/api/profile';
 import { getMyProfileAttributes, type ProfileAttributes } from '../../lib/api/onboarding';
@@ -22,6 +23,7 @@ import type { Profile } from '../../lib/types';
 
 export default function MyProfile() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [attrs, setAttrs] = useState<ProfileAttributes | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -94,8 +96,7 @@ export default function MyProfile() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.topRow}>
-        <SectionLabel tone="brass">You</SectionLabel>
+      <View style={[styles.topRow, { marginTop: insets.top }]}>
         <View style={styles.spacer} />
         <Pressable onPress={() => router.push('/settings')} hitSlop={10}>
           <Ionicons name="settings-outline" size={20} color={colors.textSecondary} />

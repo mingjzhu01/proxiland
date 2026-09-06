@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getIncomingRequests, getOutgoingRequests, respondToRequest, hideRequestForMe } from '../../lib/api/requests';
 import { getIncomingRevealRequests, revealRequest, type IncomingRevealRequest } from '../../lib/api/reveal';
 import { useRequestsBadge } from '../../lib/requestsBadge';
@@ -25,6 +26,7 @@ function formatMeetingTime(meetingAt: string | null): string | null {
 }
 
 export default function Requests() {
+  const insets = useSafeAreaInsets();
   const [incoming, setIncoming] = useState<ConnectionRequest[]>([]);
   const [outgoing, setOutgoing] = useState<ConnectionRequest[]>([]);
   const [incomingReveals, setIncomingReveals] = useState<IncomingRevealRequest[]>([]);
@@ -113,8 +115,7 @@ export default function Requests() {
       renderItem={null}
       ListHeaderComponent={
         <>
-          <View style={styles.header}>
-            <SectionLabel tone="brass">Requests</SectionLabel>
+          <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
             <Text style={styles.headline}>
               {waitingCount > 0
                 ? `${waitingCount} ${waitingCount === 1 ? 'person is' : 'people are'} waiting on you`

@@ -6,6 +6,7 @@ import { useCallback, useState } from 'react';
 import { View, FlatList, Text, Pressable, StyleSheet, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AnonCard } from '../../components/AnonCard';
 import { NearbyIdentityCard } from '../../components/NearbyIdentityCard';
 import { Card } from '../../components/Card';
@@ -60,6 +61,7 @@ type ListItem =
 
 export default function Nearby() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { hasProfile, isDemo } = useAuth();
   const [visibilityExpiresAt, setVisibilityExpiresAt] = useState<string | null>(null);
   const [visibilitySheetOpen, setVisibilitySheetOpen] = useState(false);
@@ -249,9 +251,8 @@ export default function Nearby() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
         <View style={styles.topRow}>
-          <SectionLabel tone="brass">Nearby</SectionLabel>
           <View style={styles.spacer} />
           {isDemo ? (
             <View style={styles.demoPill}>
