@@ -7,6 +7,7 @@ import { EventAttendeeCard } from '../../../components/EventAttendeeCard';
 import { SegmentedControl, type Segment } from '../../../components/SegmentedControl';
 import { LetteredAvatar } from '../../../components/LetteredAvatar';
 import { SectionLabel } from '../../../components/SectionLabel';
+import { EventFeedbackSheet } from '../../../components/EventFeedbackSheet';
 import { getMyConnections } from '../../../lib/api/connections';
 import { EVENT_INTENT_DEFAULTS } from '../../../lib/eventIntentConfig';
 import { logSessionEvent } from '../../../lib/api/instrumentation';
@@ -54,6 +55,7 @@ export default function EventScreen() {
   const [isLeaving, setIsLeaving] = useState(false);
   const [checkedInAt, setCheckedInAt] = useState<string | null>(null);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   const load = useCallback(
     async (regenerate: boolean) => {
@@ -144,6 +146,7 @@ export default function EventScreen() {
     try {
       await checkOutOfEvent(id);
       logSessionEvent('event_checked_out', { scopeId: id });
+      setShowFeedback(true);
       await load(false);
     } catch (error: any) {
       Alert.alert('Could not check out', error.message ?? String(error));
@@ -250,6 +253,7 @@ export default function EventScreen() {
   ];
 
   return (
+    <>
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View style={styles.headerTopRow}>
@@ -420,6 +424,8 @@ export default function EventScreen() {
         </>
       )}
     </View>
+    <EventFeedbackSheet visible={showFeedback} eventId={id} onClose={() => setShowFeedback(false)} />
+    </>
   );
 }
 
