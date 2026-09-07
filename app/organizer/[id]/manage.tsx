@@ -18,6 +18,7 @@ import {
 import { Card } from '../../../components/Card';
 import { PrimaryButton, SecondaryButton } from '../../../components/Buttons';
 import { SectionLabel } from '../../../components/SectionLabel';
+import { logSessionEvent } from '../../../lib/api/instrumentation';
 import { colors, spacing, typeStyles, fonts, radii } from '../../../lib/theme';
 
 export default function ManageEvent() {
@@ -87,6 +88,7 @@ export default function ManageEvent() {
           setIsBusy(true);
           try {
             await endEventEarly(id);
+            logSessionEvent('event_ended_early', { scopeId: id });
             await load();
           } catch (error: any) {
             Alert.alert('Could not end event', error.message ?? String(error));
@@ -110,6 +112,7 @@ export default function ManageEvent() {
           onPress: async () => {
             try {
               await removeEventParticipant(id, participant.user_id);
+              logSessionEvent('event_participant_removed', { scopeId: id });
               await load();
             } catch (error: any) {
               Alert.alert('Could not remove', error.message ?? String(error));

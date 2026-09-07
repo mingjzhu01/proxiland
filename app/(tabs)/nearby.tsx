@@ -2,7 +2,7 @@
 // People you're already connected to show as their real profile instead of an anon card —
 // there's no anonymity left to protect once you're actually connected, and re-anonymizing
 // someone you already know would just be confusing.
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View, FlatList, Text, Pressable, StyleSheet, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +17,7 @@ import { VisibilityToggle } from '../../components/VisibilityToggle';
 import { getMyActiveVisibility } from '../../lib/api/visibility';
 import { getMyConnections } from '../../lib/api/connections';
 import { getCurrentCoords } from '../../lib/location';
+import { getDismissedEventArrivalIds, dismissEventArrival } from '../../lib/eventArrivalDismiss';
 import { colors, avatarSizes, typeStyles, spacing, radii, fonts } from '../../lib/theme';
 import {
   getOrCreateGeoScope,
@@ -82,6 +83,11 @@ export default function Nearby() {
   const [nearbyEvents, setNearbyEvents] = useState<EventSummary[]>([]);
   const [myActiveEvents, setMyActiveEvents] = useState<EventSummary[]>([]);
   const [isJoiningEventId, setIsJoiningEventId] = useState<string | null>(null);
+  const [dismissedEventIds, setDismissedEventIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    getDismissedEventArrivalIds().then(setDismissedEventIds);
+  }, []);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -205,17 +211,39 @@ export default function Nearby() {
     }
   }
 
-  async function handleJoinEvent(event: EventSummary) {
-    setIsJoiningEventId(event.id);
-    try {
-      await joinEvent(event.id, 'geofence_prompt');
-      router.push(`/event/${event.id}`);
-      await load();
-    } catch (error: any) {
-      Alert.alert('Could not join event', error.message ?? String(error));
-    } finally {
-      setIsJoiningEventId(null);
-    }
+  function handleJoinEvent(event: EventSummary) {
+    // Explicit confirmation before joining, same disclosure as the QR/link join flow
+    // (app/event-join/[token].tsx) — ambient proximity detection shouldn't join on a single
+    // tap with no "here's what this does" step.
+    Alert.alert(
+      event.name ?? 'Join this event?',
+      "Attendees see your real name and photo for the length of the event — no anonymous cards in here.",
+      [
+        {
+          text: 'Not now',
+          style: 'cancel',
+          onPress: () => {
+            setDismissedEventIds((prev) => new Set(prev).add(event.id));
+            dismissEventArrival(event.id);
+          },
+        },
+        {
+          text: 'Join',
+          onPress: async () => {
+            setIsJoiningEventId(event.id);
+            try {
+              await joinEvent(event.id, 'geofence_prompt');
+              router.push(`/event/${event.id}`);
+              await load();
+            } catch (error: any) {
+              Alert.alert('Could not join event', error.message ?? String(error));
+            } finally {
+              setIsJoiningEventId(null);
+            }
+          },
+        },
+      ]
+    );
   }
 
   function handleLockedTap() {
@@ -235,7 +263,7 @@ export default function Nearby() {
   // before the app knows for sure.
   const profileIncomplete = hasProfile !== true;
   const joinedEventIds = new Set(myActiveEvents.map((e) => e.id));
-  const joinableNearbyEvents = nearbyEvents.filter((e) => !joinedEventIds.has(e.id));
+  const joinableNearbyEvents = nearbyEvents.filter((e) => !joinedEventIds.has(e.id) && !dismissedEventIds.has(e.id));
 
   const identityGroup: ListItem[] = [
     ...connections

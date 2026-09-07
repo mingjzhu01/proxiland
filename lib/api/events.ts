@@ -44,6 +44,18 @@ export async function leaveEvent(eventId: string): Promise<void> {
   if (error) throw error;
 }
 
+// Presence, distinct from membership — see migration 0060. Discovery/matching (eligible_event_
+// candidates, get_event_attendees) both require the caller to be checked in, not just joined.
+export async function checkInToEvent(eventId: string): Promise<void> {
+  const { error } = await supabase.rpc('check_in_to_event', { p_event_id: eventId });
+  if (error) throw error;
+}
+
+export async function checkOutOfEvent(eventId: string): Promise<void> {
+  const { error } = await supabase.rpc('check_out_of_event', { p_event_id: eventId });
+  if (error) throw error;
+}
+
 export async function getMyActiveEvents(): Promise<(EventSummary & { status: string })[]> {
   const { data, error } = await supabase.rpc('get_my_active_events');
   if (error) throw error;
@@ -72,13 +84,13 @@ export async function getEventAttendees(eventId: string): Promise<EventAttendee[
 
 export async function getMyEventMembership(
   eventId: string
-): Promise<{ status: 'active' | 'left'; join_method: JoinMethod | null } | null> {
+): Promise<{ status: 'active' | 'left'; join_method: JoinMethod | null; checked_in_at: string | null } | null> {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return null;
 
   const { data, error } = await supabase
     .from('scope_members')
-    .select('status, join_method')
+    .select('status, join_method, checked_in_at')
     .eq('scope_id', eventId)
     .eq('user_id', userData.user.id)
     .maybeSingle();
@@ -164,6 +176,10 @@ export type EventMatch = {
   match_reason: string | null;
   intent_complement: number;
   professional_overlap: number;
+  // False when the run that produced this row fell back to deterministic-only scoring (the AI
+  // call failed or never ran) — match_runs.status, threaded through so the UI can tell a real
+  // AI-authored reason apart from a fallback template one instead of presenting both the same.
+  isAiGenerated: boolean;
 };
 
 // Reuses the existing connection_requests system (lib/api/requests.ts) rather than
@@ -189,11 +205,18 @@ export async function getMyEventMatches(eventId: string): Promise<EventMatch[]> 
 
   const { data, error } = await supabase
     .from('match_recommendations')
-    .select('candidate_user_id, score, match_reason, intent_complement, professional_overlap')
+    .select('candidate_user_id, score, match_reason, intent_complement, professional_overlap, match_runs(status)')
     .eq('scope_id', eventId)
     .eq('source_user_id', userData.user.id)
     .order('score', { ascending: false });
 
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).map((row: any) => ({
+    candidate_user_id: row.candidate_user_id,
+    score: row.score,
+    match_reason: row.match_reason,
+    intent_complement: row.intent_complement,
+    professional_overlap: row.professional_overlap,
+    isAiGenerated: row.match_runs?.status === 'ai',
+  }));
 }

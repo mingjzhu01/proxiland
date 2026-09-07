@@ -21,6 +21,9 @@ import {
   generateEventMatches,
   sendEventConnectRequest,
   getOutgoingEventConnectTargetIds,
+  getMyEventMembership,
+  checkInToEvent,
+  checkOutOfEvent,
   leaveEvent,
   type EventSummary,
   type EventAttendee,
@@ -49,6 +52,8 @@ export default function EventScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
+  const [checkedInAt, setCheckedInAt] = useState<string | null>(null);
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
 
   const load = useCallback(
     async (regenerate: boolean) => {
@@ -59,13 +64,26 @@ export default function EventScreen() {
           return;
         }
 
-        const [myEvents, attendeeList, myConnections, requestedIds] = await Promise.all([
-          getMyActiveEvents(),
+        const [myEvents, membership] = await Promise.all([getMyActiveEvents(), getMyEventMembership(id)]);
+        setEvent(myEvents.find((e) => e.id === id) ?? null);
+        setCheckedInAt(membership?.checked_in_at ?? null);
+
+        // Discovery/matching require presence, not just membership — see migration 0060.
+        // Skip the attendee/match calls entirely rather than let them round-trip to the
+        // server's "check in first" error.
+        if (!membership?.checked_in_at) {
+          setAttendees([]);
+          setAttendeeById(new Map());
+          setTopMatches([]);
+          setSharedOverlap([]);
+          return;
+        }
+
+        const [attendeeList, myConnections, requestedIds] = await Promise.all([
           getEventAttendees(id),
           getMyConnections(),
           getOutgoingEventConnectTargetIds(id),
         ]);
-        setEvent(myEvents.find((e) => e.id === id) ?? null);
         setAttendees(attendeeList);
         setAttendeeById(new Map(attendeeList.map((a) => [a.user_id, a])));
         setConnectedUserIds(new Set(myConnections.map((c) => c.other!.id)));
@@ -108,6 +126,29 @@ export default function EventScreen() {
       load(false).finally(() => setIsLoading(false));
     }, [load])
   );
+
+  async function handleCheckIn() {
+    setIsCheckingIn(true);
+    try {
+      await checkInToEvent(id);
+      logSessionEvent('event_checked_in', { scopeId: id });
+      await load(false);
+    } catch (error: any) {
+      Alert.alert('Could not check in', error.message ?? String(error));
+    } finally {
+      setIsCheckingIn(false);
+    }
+  }
+
+  async function handleCheckOut() {
+    try {
+      await checkOutOfEvent(id);
+      logSessionEvent('event_checked_out', { scopeId: id });
+      await load(false);
+    } catch (error: any) {
+      Alert.alert('Could not check out', error.message ?? String(error));
+    }
+  }
 
   async function handleRefresh() {
     setIsRefreshing(true);
@@ -155,8 +196,9 @@ export default function EventScreen() {
 
   function handleMenu() {
     Alert.alert('Event options', undefined, [
-      { text: 'Leave event', style: 'destructive', onPress: handleLeave },
-      { text: 'Cancel', style: 'cancel' },
+      ...(checkedInAt ? [{ text: 'Check out', onPress: handleCheckOut }] : []),
+      { text: 'Leave event', style: 'destructive' as const, onPress: handleLeave },
+      { text: 'Cancel', style: 'cancel' as const },
     ]);
   }
 
@@ -230,17 +272,37 @@ export default function EventScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.segmentBand}>
-        <SegmentedControl segments={segments} activeKey={segment} onChange={(k) => setSegment(k as typeof segment)} />
-      </View>
+      {!checkedInAt ? (
+        <View style={styles.checkInWrap}>
+          <View style={styles.checkInCard}>
+            <Text style={styles.checkInTitle}>You're not checked in yet</Text>
+            <Text style={styles.checkInBody}>
+              Confirm you're actually at {event.name ?? 'the event'} to see who else is here and
+              get matched.
+            </Text>
+            <Pressable style={styles.checkInButton} onPress={handleCheckIn} disabled={isCheckingIn}>
+              <Text style={styles.checkInButtonText}>{isCheckingIn ? 'Checking in…' : "I'm here — check in"}</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : (
+        <>
+          <View style={styles.segmentBand}>
+            <SegmentedControl segments={segments} activeKey={segment} onChange={(k) => setSegment(k as typeof segment)} />
+          </View>
 
-      <ScrollView
-        style={styles.body}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={colors.brand} />}
-      >
+          <ScrollView
+            style={styles.body}
+            refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={colors.brand} />}
+          >
         {segment === 'top' ? (
           <>
-            <Text style={styles.explainer}>Ranked on how your ask meets their offer.</Text>
+            <Text style={styles.explainer}>
+              Ranked on how your ask meets their offer.
+              {topMatches.length > 0 && !topMatches[0].isAiGenerated
+                ? ' AI matching is unavailable right now, so this is a simpler ranking.'
+                : ''}
+            </Text>
             {topMatches.length > 0 ? (
               topMatches.map((m, i) => {
                 const attendee = attendeeById.get(m.candidate_user_id);
@@ -354,7 +416,9 @@ export default function EventScreen() {
             )}
           </>
         ) : null}
-      </ScrollView>
+          </ScrollView>
+        </>
+      )}
     </View>
   );
 }
@@ -369,6 +433,19 @@ const styles = StyleSheet.create({
   spacer: { flex: 1 },
   eventName: { ...typeStyles.eventTitle, marginTop: 10 },
   eventMeta: { fontFamily: fonts.wordmark, fontSize: 12.5, color: 'rgba(245,239,230,.66)', marginTop: 4 },
+  checkInWrap: { flex: 1, padding: spacing.gutter, justifyContent: 'center' },
+  checkInCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.rule,
+    borderRadius: radii.card,
+    padding: 20,
+    alignItems: 'center',
+  },
+  checkInTitle: { fontFamily: fonts.wordmark, fontSize: 18, fontWeight: '700', color: colors.ink, marginBottom: 8, textAlign: 'center' },
+  checkInBody: { fontFamily: fonts.wordmark, fontSize: 14, color: colors.textSecondary, lineHeight: 20, textAlign: 'center', marginBottom: 18 },
+  checkInButton: { backgroundColor: colors.ink, borderRadius: radii.button, paddingVertical: 14, paddingHorizontal: 24, width: '100%', alignItems: 'center' },
+  checkInButtonText: { fontFamily: fonts.wordmark, fontSize: 15, fontWeight: '600', color: colors.inkOn },
   editButton: {
     backgroundColor: colors.paper,
     borderRadius: radii.button,

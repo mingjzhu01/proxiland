@@ -27,7 +27,13 @@ export async function logSessionEvent(
     | 'event_intent_completed'
     | 'event_intent_edited'
     | 'event_intent_update_saved'
-    | 'event_matches_regenerated',
+    | 'event_matches_regenerated'
+    | 'event_landing_viewed'
+    | 'event_checked_in'
+    | 'event_checked_out'
+    | 'event_participant_removed'
+    | 'event_ended_early'
+    | 'event_feedback_submitted',
   options?: { scopeId?: string; metadata?: Record<string, unknown> }
 ): Promise<void> {
   // Best-effort — instrumentation should never block or surface errors to the user.
