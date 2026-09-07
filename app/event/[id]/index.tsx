@@ -268,7 +268,10 @@ export default function EventScreen() {
 
         <Text style={styles.eventName}>{event.name}</Text>
         <Text style={styles.eventMeta}>
-          {[event.organizer_name, `${attendees.length} here now`].filter(Boolean).join(' · ')}
+          {/* Attendee count only means something once the caller has checked in — before that,
+              attendees is deliberately empty (see load()), and "0 here now" would misleadingly
+              read as "nobody's here" rather than "you haven't unlocked this yet". */}
+          {[event.organizer_name, checkedInAt ? `${attendees.length} here now` : null].filter(Boolean).join(' · ')}
         </Text>
 
         <Pressable style={styles.editButton} onPress={() => router.push(`/event/${id}/intent`)}>
