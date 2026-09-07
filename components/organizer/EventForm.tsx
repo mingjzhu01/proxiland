@@ -188,9 +188,9 @@ function FieldLabel({ children }: { children: string }) {
 }
 
 const styles = StyleSheet.create({
-  fieldLabel: { fontFamily: fonts.wordmark, fontSize: 12.5, color: colors.textTertiary, marginBottom: 6, marginTop: 16 },
+  fieldLabel: { fontFamily: fonts.sansSemibold, fontSize: 12.5, color: colors.textTertiary, marginBottom: 6, marginTop: 16 },
   input: {
-    fontFamily: fonts.wordmark,
+    fontFamily: fonts.sans,
     fontSize: 15,
     color: colors.ink,
     borderWidth: 1,
@@ -204,9 +204,9 @@ const styles = StyleSheet.create({
   dateRow: { flexDirection: 'row', gap: 10 },
   picker: { flex: 1 },
   coordInput: { flex: 1 },
-  helper: { fontFamily: fonts.wordmark, fontSize: 12, color: colors.textMuted, marginTop: 6 },
+  helper: { fontFamily: fonts.sans, fontSize: 12, color: colors.textMuted, marginTop: 6 },
   geoCard: { marginTop: 20, backgroundColor: colors.surfaceSunken },
-  geoTitle: { fontFamily: fonts.wordmark, fontSize: 14, fontWeight: '700', color: colors.ink, marginBottom: 4 },
-  geoHelper: { fontFamily: fonts.wordmark, fontSize: 12.5, color: colors.textTertiary, lineHeight: 18, marginBottom: 12 },
+  geoTitle: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.ink, marginBottom: 4 },
+  geoHelper: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.textTertiary, lineHeight: 18, marginBottom: 12 },
   submit: { marginTop: 28, marginBottom: 12 },
 });

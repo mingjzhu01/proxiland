@@ -141,9 +141,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
   },
-  searchInput: { fontFamily: fonts.wordmark, flex: 1, fontSize: 14, color: colors.ink },
+  searchInput: { fontFamily: fonts.sans, flex: 1, fontSize: 14, color: colors.ink },
   groupLabel: { marginHorizontal: spacing.gutter, marginTop: 18, marginBottom: 8 },
-  empty: { fontFamily: fonts.wordmark, padding: 24, textAlign: 'center', color: colors.textMuted, fontSize: 14 },
+  empty: { fontFamily: fonts.sans, padding: 24, textAlign: 'center', color: colors.textMuted, fontSize: 14 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
   },
   info: { flex: 1, gap: 2 },
   nameRow: { flexDirection: 'row', alignItems: 'center' },
-  name: { fontFamily: fonts.wordmark, fontSize: 16, color: colors.ink },
-  preview: { fontFamily: fonts.wordmark, fontSize: 13.5, color: colors.textTertiary },
+  name: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.ink },
+  preview: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.textTertiary },
   previewUnread: { color: colors.ink },
 });

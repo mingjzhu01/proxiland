@@ -72,6 +72,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.gutter,
     paddingVertical: 14,
   },
-  rowLabel: { fontFamily: fonts.wordmark, flex: 1, fontSize: 15, color: colors.ink, fontWeight: '500' },
+  rowLabel: { fontFamily: fonts.sansSemibold, flex: 1, fontSize: 15, color: colors.ink },
   rowLabelDanger: { color: colors.error },
 });

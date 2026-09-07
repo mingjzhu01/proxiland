@@ -93,7 +93,7 @@ export default function OrganizerHome() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paper },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: colors.paper },
-  notAuthorizedText: { fontFamily: fonts.wordmark, fontSize: 14, color: colors.textTertiary, textAlign: 'center' },
+  notAuthorizedText: { fontFamily: fonts.sans, fontSize: 14, color: colors.textTertiary, textAlign: 'center' },
   content: { paddingBottom: 60 },
   header: { paddingHorizontal: spacing.gutter, paddingBottom: 16 },
   topRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
@@ -107,9 +107,9 @@ const styles = StyleSheet.create({
     borderRadius: radii.button,
     paddingVertical: 12,
   },
-  newButtonText: { fontFamily: fonts.wordmark, fontSize: 14, fontWeight: '600', color: colors.inkOn },
+  newButtonText: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.inkOn },
   emptyCard: { marginHorizontal: spacing.gutter, marginTop: 14, borderWidth: 1, borderColor: colors.rule, borderRadius: radii.card, padding: 16 },
-  emptyText: { fontFamily: fonts.wordmark, fontSize: 13, color: colors.textTertiary },
+  emptyText: { fontFamily: fonts.sans, fontSize: 13, color: colors.textTertiary },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -121,6 +121,6 @@ const styles = StyleSheet.create({
     borderColor: colors.ruleInner,
   },
   rowInfo: { flex: 1, gap: 2 },
-  rowName: { fontFamily: fonts.wordmark, fontSize: 16, color: colors.ink },
-  rowVenue: { fontFamily: fonts.wordmark, fontSize: 12.5, color: colors.textSecondary },
+  rowName: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.ink },
+  rowVenue: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.textSecondary },
 });

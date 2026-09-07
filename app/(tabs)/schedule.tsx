@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paper },
   header: { paddingHorizontal: spacing.gutter, paddingTop: 14, paddingBottom: 8 },
   headline: { ...typeStyles.screenHeadline, marginTop: 8 },
-  empty: { fontFamily: fonts.wordmark, padding: 24, textAlign: 'center', color: colors.textMuted, fontSize: 14 },
+  empty: { fontFamily: fonts.sans, padding: 24, textAlign: 'center', color: colors.textMuted, fontSize: 14 },
   groupLabel: { marginHorizontal: spacing.gutter, marginTop: 20, marginBottom: 8 },
   card: {
     marginHorizontal: spacing.gutter,
@@ -164,12 +164,12 @@ const styles = StyleSheet.create({
   },
   cardRow: { flexDirection: 'row', alignItems: 'center', padding: 16 },
   timeColumn: { width: 54, alignItems: 'center' },
-  timeNumber: { fontFamily: fonts.wordmark, fontSize: 25, color: colors.ink },
-  timePeriod: { fontFamily: fonts.wordmark, fontSize: 10, color: colors.textMuted, marginTop: 2 },
+  timeNumber: { fontFamily: fonts.sansSemibold, fontSize: 25, color: colors.ink },
+  timePeriod: { fontFamily: fonts.sans, fontSize: 10, color: colors.textMuted, marginTop: 2 },
   timeDivider: { width: 1, alignSelf: 'stretch', backgroundColor: colors.ruleInner, marginHorizontal: 14 },
   info: { flex: 1, gap: 3 },
-  venue: { fontFamily: fonts.wordmark, fontSize: 13, color: colors.textTertiary },
-  note: { fontFamily: fonts.wordmark, fontSize: 13.5, color: colors.ink, fontStyle: 'italic' },
+  venue: { fontFamily: fonts.sans, fontSize: 13, color: colors.textTertiary },
+  note: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.ink, fontStyle: 'italic' },
   nextUpFooter: {
     flexDirection: 'row',
     gap: 10,
@@ -178,5 +178,5 @@ const styles = StyleSheet.create({
     borderColor: colors.ruleInner,
   },
   flex1: { flex: 1 },
-  hint: { fontFamily: fonts.wordmark, fontSize: 12.5, color: colors.textMuted, textAlign: 'center', marginTop: 8, marginBottom: 20 },
+  hint: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.textMuted, textAlign: 'center', marginTop: 8, marginBottom: 20 },
 });

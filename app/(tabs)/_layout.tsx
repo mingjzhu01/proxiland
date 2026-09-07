@@ -31,7 +31,7 @@ export default function TabsLayout() {
             borderTopWidth: 1,
             paddingTop: 9,
           },
-          tabBarLabelStyle: { fontFamily: fonts.wordmark, fontSize: 9.5, fontWeight: '600' },
+          tabBarLabelStyle: { fontFamily: fonts.sansSemibold, fontSize: 9.5 },
           tabBarBadgeStyle: { backgroundColor: colors.brass, color: colors.inkOn },
         }}
       >

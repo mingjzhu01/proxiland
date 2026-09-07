@@ -94,5 +94,5 @@ const styles = StyleSheet.create({
   body: { padding: 16, paddingBottom: 0, gap: 8 },
   chipRow: { flexDirection: 'row', gap: 6 },
   footer: { padding: 16, gap: 12 },
-  hint: { fontFamily: fonts.wordmark, fontSize: 11.5, lineHeight: 16, color: colors.textMuted, textAlign: 'center' },
+  hint: { fontFamily: fonts.sans, fontSize: 11.5, lineHeight: 16, color: colors.textMuted, textAlign: 'center' },
 });

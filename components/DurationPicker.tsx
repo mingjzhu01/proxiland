@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#111',
   },
   item: { height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' },
-  itemText: { fontFamily: fonts.wordmark, fontSize: 17, color: '#999' },
+  itemText: { fontFamily: fonts.sans, fontSize: 17, color: '#999' },
   itemTextSelected: { color: '#fff', fontWeight: '700' },
-  valueLabel: { fontFamily: fonts.wordmark, fontSize: 15, fontWeight: '700', color: '#111' },
+  valueLabel: { fontFamily: fonts.sansSemibold, fontSize: 15, color: '#111' },
 });

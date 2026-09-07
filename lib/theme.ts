@@ -36,14 +36,17 @@ export const colors = {
   error: '#cc3333',
 } as const;
 
+// Typography pairing: Yeseva One (display) + Source Sans 3 (everything else). Yeseva One only
+// has one true weight loaded (400) — never apply fontWeight to text using `wordmark`, it fakes
+// a bold that reads as muddy rather than emphatic. Source Sans 3 has two real weights loaded
+// (400/600), so hierarchy that needs weight (names, headings, buttons, chips, tabs) goes
+// through `sansSemibold`, not a synthetic bold on `sans`.
 export const fonts = {
   // Loaded via useFonts() in app/_layout.tsx before the splash hides — see that file.
+  // Reserved for the wordmark/logo "P" and main screen titles only — see typeStyles below.
   wordmark: 'YesevaOne_400Regular',
-  // Founder call: use Yeseva One everywhere for now, including what was previously
-  // Newsreader-only display text — an alias here (rather than rewriting every typeStyle
-  // that references `fonts.serif`) so it's a one-line change to split them again later.
-  // Newsreader_400Regular is still loaded in _layout.tsx in case that split comes back.
-  serif: 'YesevaOne_400Regular',
+  sans: 'SourceSans3_400Regular',
+  sansSemibold: 'SourceSans3_600SemiBold',
 } as const;
 
 export const radii = {
@@ -62,35 +65,39 @@ export const spacing = {
 } as const;
 
 export const typeStyles = {
+  // --- Yeseva One: wordmark + main screen titles only ---
   wordmark: { fontFamily: fonts.wordmark, fontSize: 42, lineHeight: 45 },
+  screenHeadline: { fontFamily: fonts.wordmark, fontSize: 30, lineHeight: 34, letterSpacing: -0.3, color: colors.ink },
+  eventTitle: { fontFamily: fonts.wordmark, fontSize: 29, lineHeight: 33, color: colors.inkOn },
+
+  // --- Source Sans 3 Regular: body, bios, match explanations, instructional copy ---
   tagline: {
-    fontFamily: fonts.wordmark,
+    fontFamily: fonts.sans,
     fontSize: 14,
     lineHeight: 21,
     letterSpacing: 0.28,
     color: 'rgba(247,243,236,.78)',
   },
-  screenHeadline: { fontFamily: fonts.serif, fontSize: 30, lineHeight: 34, letterSpacing: -0.3, color: colors.ink },
-  eventTitle: { fontFamily: fonts.serif, fontSize: 29, lineHeight: 33, color: colors.inkOn },
-  matchRationale: { fontFamily: fonts.serif, fontSize: 19, lineHeight: 27, color: colors.ink },
-  matchRationaleChat: { fontFamily: fonts.serif, fontSize: 17, lineHeight: 24, color: colors.ink },
-  cardName: { fontFamily: fonts.wordmark, fontSize: 17, fontWeight: '600' as const, letterSpacing: -0.17, color: colors.ink },
-  cardSubtitle: { fontFamily: fonts.wordmark, fontSize: 13.5, color: colors.textSecondary },
-  cardTertiary: { fontFamily: fonts.wordmark, fontSize: 12.5, color: colors.textMuted },
-  anonLine: { fontFamily: fonts.wordmark, fontSize: 16.5, fontWeight: '500' as const, lineHeight: 23, color: colors.ink },
+  matchRationale: { fontFamily: fonts.sans, fontSize: 17, lineHeight: 25, color: colors.ink },
+  matchRationaleChat: { fontFamily: fonts.sans, fontSize: 16, lineHeight: 23, color: colors.ink },
+  cardSubtitle: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.textSecondary },
+  cardTertiary: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.textMuted },
+  anonLine: { fontFamily: fonts.sans, fontSize: 16.5, lineHeight: 24, color: colors.ink },
+  body: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 21 },
+  helper: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 19, color: colors.textTertiary },
+
+  // --- Source Sans 3 Semibold: section headings, card titles, person names, buttons, chips,
+  // tabs, form labels — a real semibold face now, not a synthetic bold on a display serif. ---
+  cardName: { fontFamily: fonts.sansSemibold, fontSize: 17, letterSpacing: -0.1, color: colors.ink },
   sectionLabel: {
-    fontFamily: fonts.wordmark,
-    fontSize: 10,
+    fontFamily: fonts.sansSemibold,
+    fontSize: 10.5,
     textTransform: 'uppercase' as const,
-    letterSpacing: 1.6,
+    letterSpacing: 1.4,
   },
-  // No fontWeight — Yeseva One only has one loaded weight, so a '600'/'700' here is a
-  // synthetic/faux bold that reads as muddy rather than emphatic at small sizes.
-  chip: { fontFamily: fonts.wordmark, fontSize: 11 },
-  primaryButton: { fontFamily: fonts.wordmark, fontSize: 15 },
-  body: { fontFamily: fonts.wordmark, fontSize: 14, lineHeight: 21 },
-  helper: { fontFamily: fonts.wordmark, fontSize: 12.5, lineHeight: 18.5, color: colors.textTertiary },
-  tabLabel: { fontFamily: fonts.wordmark, fontSize: 9.5, fontWeight: '600' as const },
+  chip: { fontFamily: fonts.sansSemibold, fontSize: 12 },
+  primaryButton: { fontFamily: fonts.sansSemibold, fontSize: 15 },
+  tabLabel: { fontFamily: fonts.sansSemibold, fontSize: 9.5 },
 } as const;
 
 export const avatarSizes = {

@@ -5,6 +5,7 @@ import { View, Text, TextInput, StyleSheet } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts, Newsreader_400Regular } from '@expo-google-fonts/newsreader';
 import { YesevaOne_400Regular } from '@expo-google-fonts/yeseva-one';
+import { SourceSans3_400Regular, SourceSans3_600SemiBold } from '@expo-google-fonts/source-sans-3';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../lib/auth';
@@ -20,19 +21,18 @@ import { colors, typeStyles, fonts } from '../lib/theme';
 SplashScreen.preventAutoHideAsync().catch(() => {});
 SplashScreen.hideAsync().catch(() => {});
 
-// Founder call: Yeseva One everywhere in the app, not just headlines/wordmark. Rather than
-// hand-adding fontFamily to every Text style in every screen, this sets it as the default for
-// every <Text> that doesn't already specify its own fontFamily — anything that DOES set one
-// explicitly (there are none left as of this change; see lib/theme.ts's `fonts` token) still
-// wins, since a component's own style always overrides defaultProps.style for matching keys.
+// Typography pairing (Yeseva One + Source Sans 3): Source Sans 3 Regular is the app-wide
+// default for every <Text>/<TextInput> that doesn't specify its own fontFamily — Yeseva One is
+// reserved for the wordmark and main screen titles now (lib/theme.ts's typeStyles sets it
+// explicitly on those specific styles, which wins over this default since a component's own
+// style always overrides defaultProps.style for matching keys). This replaces the earlier
+// "Yeseva One everywhere" call, which made small text (names, body copy, button labels) hard
+// to read — Yeseva One has no true semibold/bold face, so anything needing that weight for
+// hierarchy (names, section headings, buttons, chips, tabs) needed a real second family.
 (Text as any).defaultProps = (Text as any).defaultProps || {};
-(Text as any).defaultProps.style = [{ fontFamily: fonts.wordmark }, (Text as any).defaultProps.style];
-// Also every typed field (search boxes, the message composer, form inputs) — flagged as the
-// one place this is a real usability risk, not just an aesthetic one: Yeseva One is a heavy
-// display serif, and reading back what you just typed in it may be genuinely harder than in
-// the system font. Worth a special-case revert here specifically if it doesn't feel right.
+(Text as any).defaultProps.style = [{ fontFamily: fonts.sans }, (Text as any).defaultProps.style];
 (TextInput as any).defaultProps = (TextInput as any).defaultProps || {};
-(TextInput as any).defaultProps.style = [{ fontFamily: fonts.wordmark }, (TextInput as any).defaultProps.style];
+(TextInput as any).defaultProps.style = [{ fontFamily: fonts.sans }, (TextInput as any).defaultProps.style];
 
 // The auth check itself (reading a locally cached session) usually resolves in well under
 // 1200ms, so gating purely on isLoading isn't enough to make the screen actually register —
@@ -64,7 +64,12 @@ function RootNavigation() {
   const pathname = usePathname();
   const router = useRouter();
   const [showBrandedSplash, setShowBrandedSplash] = useState(true);
-  const [fontsLoaded] = useFonts({ Newsreader_400Regular, YesevaOne_400Regular });
+  const [fontsLoaded] = useFonts({
+    Newsreader_400Regular,
+    YesevaOne_400Regular,
+    SourceSans3_400Regular,
+    SourceSans3_600SemiBold,
+  });
   // Where a deep link (an event invite, most commonly) was trying to take a signed-out user,
   // captured right before the sign-in detour below so it can be resumed afterward instead of
   // always dropping them on Nearby. A ref, not state — it shouldn't itself trigger a re-render.
@@ -209,5 +214,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brassOnDark,
   },
   splashWordmark: { ...typeStyles.wordmark, color: colors.inkOn },
-  splashTagline: { ...typeStyles.tagline, fontFamily: fonts.wordmark, fontSize: 16, marginTop: 6, textTransform: 'none' },
+  splashTagline: { ...typeStyles.tagline, fontSize: 16, marginTop: 6, textTransform: 'none' },
 });

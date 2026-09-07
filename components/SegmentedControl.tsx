@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.segmentedInner,
   },
   segmentActive: { backgroundColor: colors.surface, ...shadows.segmentActive },
-  label: { fontFamily: fonts.wordmark, fontSize: 12.5, fontWeight: '600' },
+  label: { fontFamily: fonts.sansSemibold, fontSize: 12.5 },
   labelActive: { color: colors.ink },
   labelInactive: { color: colors.textTertiary },
   countActive: { color: colors.brass },

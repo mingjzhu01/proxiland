@@ -50,5 +50,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  deleteText: { fontFamily: fonts.wordmark, color: '#fff', fontWeight: '700', fontSize: 13 },
+  deleteText: { fontFamily: fonts.sansSemibold, color: '#fff', fontSize: 13 },
 });

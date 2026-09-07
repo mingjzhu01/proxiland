@@ -83,8 +83,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   info: { flex: 1 },
-  name: { fontFamily: fonts.wordmark, fontSize: 16, fontWeight: '600', color: colors.ink, letterSpacing: -0.16 },
-  subtitle: { fontFamily: fonts.wordmark, fontSize: 13.5, color: colors.textSecondary, marginTop: 1 },
-  tertiary: { fontFamily: fonts.wordmark, fontSize: 12.5, color: colors.textMuted, marginTop: 1 },
-  distance: { fontFamily: fonts.wordmark, fontSize: 12, color: colors.brass, marginTop: 2, fontWeight: '600' },
+  name: { fontFamily: fonts.sansSemibold, fontSize: 16, color: colors.ink, letterSpacing: -0.16 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 13.5, color: colors.textSecondary, marginTop: 1 },
+  tertiary: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.textMuted, marginTop: 1 },
+  distance: { fontFamily: fonts.sans, fontSize: 12, color: colors.brass, marginTop: 2, fontWeight: '600' },
 });

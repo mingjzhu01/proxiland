@@ -66,5 +66,5 @@ export function LinkedInVerifyButton({ onVerified }: { onVerified: () => void })
 
 const styles = StyleSheet.create({
   button: { backgroundColor: '#0A66C2', borderRadius: 8, paddingVertical: 12, alignItems: 'center' },
-  buttonText: { fontFamily: fonts.wordmark, color: '#fff', fontWeight: '600', fontSize: 14 },
+  buttonText: { fontFamily: fonts.sansSemibold, color: '#fff', fontSize: 14 },
 });

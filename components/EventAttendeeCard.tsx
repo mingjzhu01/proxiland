@@ -59,6 +59,6 @@ const styles = StyleSheet.create({
   info: { flex: 1, gap: 2 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   rankBadge: { backgroundColor: colors.brassChipBg, borderRadius: 999, paddingHorizontal: 7, paddingVertical: 2 },
-  rankBadgeText: { fontFamily: fonts.wordmark, fontSize: 10, color: colors.brassChipText },
+  rankBadgeText: { fontFamily: fonts.sansSemibold, fontSize: 10, color: colors.brassChipText },
   actionRow: { marginTop: 14 },
 });

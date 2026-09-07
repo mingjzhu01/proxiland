@@ -83,10 +83,10 @@ export default function DeleteAccount() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', padding: 24 },
-  title: { fontFamily: fonts.wordmark, fontSize: 22, fontWeight: '700', marginTop: 12, marginBottom: 12 },
-  warning: { fontFamily: fonts.wordmark, fontSize: 15, color: '#333', lineHeight: 22, marginBottom: 28 },
-  label: { fontFamily: fonts.wordmark, fontSize: 13, fontWeight: '600', color: '#666', marginBottom: 8 },
-  input: { fontFamily: fonts.wordmark,
+  title: { fontFamily: fonts.wordmark, fontSize: 22, marginTop: 12, marginBottom: 12 },
+  warning: { fontFamily: fonts.sans, fontSize: 15, color: '#333', lineHeight: 22, marginBottom: 28 },
+  label: { fontFamily: fonts.sansSemibold, fontSize: 13, color: '#666', marginBottom: 8 },
+  input: { fontFamily: fonts.sans,
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 10,
@@ -100,8 +100,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
   },
-  deleteButtonText: { fontFamily: fonts.wordmark, color: '#fff', fontSize: 16, fontWeight: '700' },
+  deleteButtonText: { fontFamily: fonts.sansSemibold, color: '#fff', fontSize: 16 },
   buttonDisabled: { opacity: 0.4 },
   cancelButton: { paddingVertical: 16, alignItems: 'center' },
-  cancelButtonText: { fontFamily: fonts.wordmark, color: '#666', fontSize: 15, fontWeight: '600' },
+  cancelButtonText: { fontFamily: fonts.sansSemibold, color: '#666', fontSize: 15 },
 });

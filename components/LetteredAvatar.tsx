@@ -20,7 +20,7 @@ export function LetteredAvatar({ name, photoUrl, size }: Props) {
   const initial = (name?.trim()?.[0] ?? '?').toUpperCase();
   return (
     <View style={[styles.circle, dimensionStyle]}>
-      <Text style={[styles.letter, { fontFamily: fonts.wordmark, fontSize: size * 0.4 }]}>{initial}</Text>
+      <Text style={[styles.letter, { fontSize: size * 0.4 }]}>{initial}</Text>
     </View>
   );
 }
@@ -28,5 +28,5 @@ export function LetteredAvatar({ name, photoUrl, size }: Props) {
 const styles = StyleSheet.create({
   image: { backgroundColor: colors.avatarGround },
   circle: { backgroundColor: colors.avatarGround, alignItems: 'center', justifyContent: 'center' },
-  letter: { fontFamily: fonts.serif, color: colors.avatarLetter },
+  letter: { fontFamily: fonts.sansSemibold, color: colors.avatarLetter },
 });

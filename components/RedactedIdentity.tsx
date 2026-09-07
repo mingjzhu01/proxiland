@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
   secondaryBar: { width: 74, height: 9, borderRadius: 3, backgroundColor: colors.redactBarSub },
   hidden: {
     marginLeft: 'auto',
-    fontFamily: fonts.wordmark,
+    fontFamily: fonts.sans,
     fontSize: 9.5,
     letterSpacing: 1,
     color: colors.textMuted,

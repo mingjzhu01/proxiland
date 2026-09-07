@@ -54,9 +54,9 @@ export default function SignIn() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', padding: 24, gap: 12 },
-  title: { fontFamily: fonts.wordmark, fontSize: 32, fontWeight: '700', textAlign: 'center' },
-  subtitle: { fontFamily: fonts.wordmark, fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 24 },
-  input: { fontFamily: fonts.wordmark,
+  title: { fontFamily: fonts.wordmark, fontSize: 32, textAlign: 'center' },
+  subtitle: { fontFamily: fonts.sans, fontSize: 16, color: '#666', textAlign: 'center', marginBottom: 24 },
+  input: { fontFamily: fonts.sans,
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
@@ -71,6 +71,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   buttonDisabled: { opacity: 0.5 },
-  buttonText: { fontFamily: fonts.wordmark, color: '#fff', fontSize: 16, fontWeight: '600' },
+  buttonText: { fontFamily: fonts.sansSemibold, color: '#fff', fontSize: 16 },
   link: { textAlign: 'center', marginTop: 16, color: '#0066cc' },
 });

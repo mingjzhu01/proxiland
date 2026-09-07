@@ -37,8 +37,8 @@ const styles = StyleSheet.create({
   },
   avatar: { width: 56, height: 56, borderRadius: 28 },
   avatarPlaceholder: { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' },
-  lockIcon: { fontFamily: fonts.wordmark, fontSize: 18 },
+  lockIcon: { fontFamily: fonts.sans, fontSize: 18 },
   info: { flex: 1 },
-  headline: { fontFamily: fonts.wordmark, fontSize: 15, color: '#333', fontWeight: '600' },
-  distance: { fontFamily: fonts.wordmark, fontSize: 12, color: '#999', marginTop: 2 },
+  headline: { fontFamily: fonts.sans, fontSize: 15, color: '#333', fontWeight: '600' },
+  distance: { fontFamily: fonts.sans, fontSize: 12, color: '#999', marginTop: 2 },
 });

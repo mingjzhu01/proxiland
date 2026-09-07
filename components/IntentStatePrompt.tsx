@@ -55,8 +55,8 @@ const styles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 },
   card: { backgroundColor: '#fff', borderRadius: 16, padding: 20 },
   skip: { alignSelf: 'flex-end', padding: 4, marginBottom: 4 },
-  skipText: { fontFamily: fonts.wordmark, color: '#999', fontSize: 14 },
-  title: { fontFamily: fonts.wordmark, fontSize: 17, fontWeight: '700', marginBottom: 16 },
+  skipText: { fontFamily: fonts.sansSemibold, color: '#999', fontSize: 14 },
+  title: { fontFamily: fonts.sansSemibold, fontSize: 17, marginBottom: 16 },
   option: {
     borderWidth: 1,
     borderColor: '#ddd',
@@ -64,5 +64,5 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 10,
   },
-  optionText: { fontFamily: fonts.wordmark, fontSize: 15, color: '#111' },
+  optionText: { fontFamily: fonts.sans, fontSize: 15, color: '#111' },
 });

@@ -89,8 +89,8 @@ export function EventFeedbackSheet({
 const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(36,28,22,.42)' },
   sheet: { backgroundColor: colors.paper, borderTopLeftRadius: radii.sheet, borderTopRightRadius: radii.sheet, padding: 20, paddingBottom: 32 },
-  title: { fontFamily: fonts.wordmark, fontSize: 18, fontWeight: '700', color: colors.ink, marginBottom: 4 },
-  subtitle: { fontFamily: fonts.wordmark, fontSize: 14, color: colors.textSecondary, marginBottom: 16 },
+  title: { fontFamily: fonts.sansSemibold, fontSize: 18, color: colors.ink, marginBottom: 4 },
+  subtitle: { fontFamily: fonts.sans, fontSize: 14, color: colors.textSecondary, marginBottom: 16 },
   choiceRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
   choice: {
     flex: 1,
@@ -102,10 +102,10 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   choiceSelected: { backgroundColor: colors.ink, borderColor: colors.ink },
-  choiceText: { fontFamily: fonts.wordmark, fontSize: 14, fontWeight: '600', color: colors.ink },
+  choiceText: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.ink },
   choiceTextSelected: { color: colors.inkOn },
   input: {
-    fontFamily: fonts.wordmark,
+    fontFamily: fonts.sans,
     fontSize: 14,
     color: colors.ink,
     borderWidth: 1,
@@ -118,5 +118,5 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   skipButton: { alignItems: 'center', paddingVertical: 14 },
-  skipText: { fontFamily: fonts.wordmark, fontSize: 14, fontWeight: '600', color: colors.textTertiary },
+  skipText: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.textTertiary },
 });

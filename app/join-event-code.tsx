@@ -105,9 +105,9 @@ const styles = StyleSheet.create({
   closeButton: { position: 'absolute', left: 20, zIndex: 1, padding: 4 },
   content: { flex: 1, padding: spacing.gutter, justifyContent: 'center' },
   title: { ...typeStyles.screenHeadline, marginBottom: 8, textAlign: 'center' },
-  body: { fontFamily: fonts.wordmark, fontSize: 15, color: colors.textSecondary, lineHeight: 22, marginBottom: 28, textAlign: 'center' },
+  body: { fontFamily: fonts.sans, fontSize: 15, color: colors.textSecondary, lineHeight: 22, marginBottom: 28, textAlign: 'center' },
   input: {
-    fontFamily: fonts.wordmark,
+    fontFamily: fonts.sans,
     fontSize: 28,
     letterSpacing: 6,
     textAlign: 'center',

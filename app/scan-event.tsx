@@ -80,7 +80,7 @@ export default function ScanEvent() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paper, padding: 24, justifyContent: 'center' },
   title: { ...typeStyles.screenHeadline, marginBottom: 8, textAlign: 'center' },
-  body: { fontFamily: fonts.wordmark, fontSize: 15, color: colors.textSecondary, lineHeight: 22, marginBottom: 28, textAlign: 'center' },
+  body: { fontFamily: fonts.sans, fontSize: 15, color: colors.textSecondary, lineHeight: 22, marginBottom: 28, textAlign: 'center' },
   cameraContainer: { flex: 1, backgroundColor: '#1A130F' },
   scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(26,19,15,0.35)' },
   closeButton: {
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   bracketBottomLeft: { bottom: -3, left: -3, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: 26 },
   bracketBottomRight: { bottom: -3, right: -3, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 26 },
   hint: { ...typeStyles.eventTitle, fontSize: 22, marginTop: 24, textAlign: 'center' },
-  support: { fontFamily: fonts.wordmark, fontSize: 13, color: 'rgba(245,239,230,.75)', marginTop: 8, textAlign: 'center' },
+  support: { fontFamily: fonts.sans, fontSize: 13, color: 'rgba(245,239,230,.75)', marginTop: 8, textAlign: 'center' },
   codeLink: { marginTop: 20, padding: 8 },
-  codeLinkText: { fontFamily: fonts.wordmark, fontSize: 13, fontWeight: '600', color: colors.brassOnDark, textDecorationLine: 'underline' },
+  codeLinkText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.brassOnDark, textDecorationLine: 'underline' },
 });
