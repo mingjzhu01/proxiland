@@ -59,7 +59,7 @@ function BrandedSplash() {
 }
 
 function RootNavigation() {
-  const { session, isLoading } = useAuth();
+  const { session, isLoading, hasProfile } = useAuth();
   const segments = useSegments();
   const pathname = usePathname();
   const router = useRouter();
@@ -87,21 +87,28 @@ function RootNavigation() {
           pendingPathRef.current = pathname;
         }
         router.replace('/(auth)/sign-in');
+        setShowBrandedSplash(false);
       } else if (session && inAuthGroup) {
-        // Founder call: browsing (seeing anonymized cards, the other tabs) doesn't require a
-        // completed profile — only asking to connect and expanding a card do, gated
-        // individually where those actions happen (app/(tabs)/nearby.tsx,
-        // components/AnonCard.tsx), not by blocking navigation entirely. No hasProfile check
-        // here means new users land straight on the tabs after signing in.
+        // Wait for hasProfile to actually resolve (starts null, set async right after
+        // sign-in) before deciding where to send a freshly-signed-in user — deciding on a
+        // stale null would wrongly treat "not checked yet" as "has a profile". The effect
+        // re-runs once it resolves since hasProfile is in the dependency list below.
+        if (hasProfile === null) return;
+
         const resumePath = pendingPathRef.current;
         pendingPathRef.current = null;
-        router.replace((resumePath as any) ?? '/(tabs)/nearby');
+        // New sign-ups (no profile yet) go straight to completing their profile — matching
+        // recommendations and event intent are both meaningfully worse without one, so this
+        // is worth the friction of a forced stop rather than the previous soft/no nudge.
+        router.replace(!hasProfile ? '/edit-profile' : (resumePath as any) ?? '/(tabs)/nearby');
+        setShowBrandedSplash(false);
+      } else {
+        setShowBrandedSplash(false);
       }
-      setShowBrandedSplash(false);
     }, remaining);
 
     return () => clearTimeout(timer);
-  }, [session, isLoading, fontsLoaded, segments, pathname, router]);
+  }, [session, isLoading, fontsLoaded, segments, pathname, router, hasProfile]);
 
   return (
     <>

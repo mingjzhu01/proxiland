@@ -84,8 +84,6 @@ export default function EditProfile() {
   const [industryPickerVisible, setIndustryPickerVisible] = useState(false);
   const [industrySearch, setIndustrySearch] = useState('');
   const [seniorityBand, setSeniorityBand] = useState<SeniorityBand | null>(null);
-  const [lookingFor, setLookingFor] = useState('');
-  const [canOffer, setCanOffer] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [originalLine, setOriginalLine] = useState('');
@@ -110,8 +108,6 @@ export default function EditProfile() {
       setRoleCategory(attrs.role_category);
       setIndustry(attrs.industry);
       setSeniorityBand(attrs.seniority_band);
-      setLookingFor(attrs.looking_for ?? '');
-      setCanOffer(attrs.can_offer ?? '');
       setExistingUserEdited(attrs.user_edited);
     }
   }, []);
@@ -285,8 +281,6 @@ export default function EditProfile() {
           industry: industry!,
           seniority_band: seniorityBand,
           school: derivedSchool ?? null,
-          looking_for: lookingFor.trim() || null,
-          can_offer: canOffer.trim() || null,
         });
         const attrs = await getMyProfileAttributes();
         line = attrs?.line_polished ?? attrs?.line_assembled ?? '';
@@ -305,8 +299,6 @@ export default function EditProfile() {
             industry: industryOther ? undefined : industry ?? undefined,
             seniority_band: seniorityBand,
             school: derivedSchool,
-            looking_for: lookingFor.trim() || undefined,
-            can_offer: canOffer.trim() || undefined,
           },
         });
         const { line_assembled, line_polished } = await polishLine();
@@ -645,17 +637,6 @@ export default function EditProfile() {
         />
         {bioCaption ? <Text style={styles.bioCaption}>{bioCaption}</Text> : null}
 
-        <Field
-          label="What are you looking for? (optional)"
-          value={lookingFor}
-          onChangeText={(v) => setLookingFor(v.slice(0, 60))}
-        />
-        <Field
-          label="What can you offer? (optional)"
-          value={canOffer}
-          onChangeText={(v) => setCanOffer(v.slice(0, 60))}
-        />
-
         <Text style={styles.sectionLabel}>LinkedIn</Text>
         <Field
           label="Profile URL (shown to others)"
@@ -679,6 +660,10 @@ export default function EditProfile() {
           disabled={isSubmitting}
         >
           <Text style={styles.buttonText}>{isSubmitting ? 'One sec…' : 'Save profile'}</Text>
+        </Pressable>
+
+        <Pressable style={styles.signOutLink} onPress={() => supabase.auth.signOut()}>
+          <Text style={styles.signOutLinkText}>Sign out</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -907,4 +892,6 @@ const styles = StyleSheet.create({
   buttonText: { fontFamily: fonts.sansSemibold, color: '#fff', fontSize: 16 },
   linkedinNudge: { fontFamily: fonts.sans, fontSize: 12, color: '#888', marginBottom: 8, textAlign: 'center' },
   verifiedBadge: { fontFamily: fonts.sansSemibold, color: '#0A66C2', fontSize: 14, textAlign: 'center', marginBottom: 14 },
+  signOutLink: { alignItems: 'center', paddingVertical: 16 },
+  signOutLinkText: { fontFamily: fonts.sansSemibold, fontSize: 14, color: '#888' },
 });

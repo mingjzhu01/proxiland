@@ -182,8 +182,6 @@ export default function MyProfile() {
             ].join(' · ')}
           />
         ) : null}
-        {attrs?.looking_for ? <DetailRow label="Looking for" value={attrs.looking_for} /> : null}
-        {attrs?.can_offer ? <DetailRow label="Can offer" value={attrs.can_offer} /> : null}
         {profile.bio ? <DetailRow label="Bio" value={profile.bio} last /> : null}
       </View>
 

@@ -1,5 +1,4 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Card } from './Card';
 import { LetteredAvatar } from './LetteredAvatar';
 import { WhyYouTwo } from './WhyYouTwo';
@@ -76,14 +75,7 @@ export function NearbyIdentityCard({
         ) : status === 'requested' ? (
           <ResolvedButton label="Requested" />
         ) : (
-          <View style={styles.buttonRow}>
-            <View style={styles.connectFlex}>
-              <PrimaryButton label="Connect" onPress={onConnect} />
-            </View>
-            <Pressable style={styles.iconButton}>
-              <Ionicons name="bookmark-outline" size={18} color={colors.ink} />
-            </Pressable>
-          </View>
+          <PrimaryButton label="Connect" onPress={onConnect} />
         )}
       </View>
     </Card>
@@ -96,15 +88,4 @@ const styles = StyleSheet.create({
   info: { flex: 1, gap: 2 },
   actionRow: { marginTop: 14 },
   connectedHint: { fontFamily: fonts.sans, fontSize: 11, color: colors.textMuted, marginBottom: 8 },
-  buttonRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
-  connectFlex: { flex: 1 },
-  iconButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.rule,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 });

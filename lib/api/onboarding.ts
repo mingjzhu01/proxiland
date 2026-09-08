@@ -66,8 +66,6 @@ export async function updateQuickFields(fields: {
   industry: Industry;
   seniority_band: SeniorityBand;
   school: string | null;
-  looking_for: string | null;
-  can_offer: string | null;
 }): Promise<void> {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) throw new Error('Not signed in');
