@@ -1,8 +1,7 @@
 // Locked, read-only view of your own profile. All editing (including first-time setup)
-// happens in app/edit-profile.tsx — this screen just displays the result, with a single
-// Edit button at the bottom. Sign-out, blocked users, and delete account moved to
-// app/settings.tsx per the visual redesign — they don't need to compete with profile
-// content on every visit.
+// happens in app/edit-profile.tsx — this screen just displays the result, with an Edit
+// button and a Sign out link at the bottom (also reachable via Settings — blocked users and
+// delete account stay in app/settings.tsx, they don't need this level of visibility).
 import { useCallback, useState } from 'react';
 import { View, Text, Pressable, Switch, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -186,6 +185,9 @@ export default function MyProfile() {
       </View>
 
       <SecondaryButton label="Edit profile" onPress={() => router.push('/edit-profile')} />
+      <Pressable style={styles.signOutLink} onPress={() => supabase.auth.signOut()}>
+        <Text style={styles.signOutLinkText}>Sign out</Text>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -271,4 +273,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   securityBannerButtonText: { fontFamily: fonts.sansSemibold, color: colors.inkOn, fontSize: 13 },
+  signOutLink: { alignItems: 'center', paddingVertical: 16 },
+  signOutLinkText: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.textMuted },
 });

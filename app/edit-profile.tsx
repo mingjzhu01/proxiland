@@ -661,10 +661,6 @@ export default function EditProfile() {
         >
           <Text style={styles.buttonText}>{isSubmitting ? 'One sec…' : 'Save profile'}</Text>
         </Pressable>
-
-        <Pressable style={styles.signOutLink} onPress={() => supabase.auth.signOut()}>
-          <Text style={styles.signOutLinkText}>Sign out</Text>
-        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -892,6 +888,4 @@ const styles = StyleSheet.create({
   buttonText: { fontFamily: fonts.sansSemibold, color: '#fff', fontSize: 16 },
   linkedinNudge: { fontFamily: fonts.sans, fontSize: 12, color: '#888', marginBottom: 8, textAlign: 'center' },
   verifiedBadge: { fontFamily: fonts.sansSemibold, color: '#0A66C2', fontSize: 14, textAlign: 'center', marginBottom: 14 },
-  signOutLink: { alignItems: 'center', paddingVertical: 16 },
-  signOutLinkText: { fontFamily: fonts.sansSemibold, fontSize: 14, color: '#888' },
 });
