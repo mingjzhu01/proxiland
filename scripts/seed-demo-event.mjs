@@ -194,10 +194,14 @@ async function main() {
     const intent = NPC_INTENTS[npc.email];
     if (!intent) throw new Error(`No NPC_INTENTS entry for ${npc.email} — add one before seeding.`);
 
+    // checked_in_at is set explicitly for the same reason completed_at is below — a fake NPC
+    // account can never tap "I'm here — check in" through the real UI, so presence has to be
+    // seeded directly or eligible_event_candidates/get_event_attendees (both of which require
+    // checked_in_at is not null) will silently exclude every NPC from matching/discovery.
     const { error: memberError } = await admin
       .from('scope_members')
       .upsert(
-        { scope_id: event.id, user_id: npc.id, join_method: 'admin_test', status: 'active', joined_at: now },
+        { scope_id: event.id, user_id: npc.id, join_method: 'admin_test', status: 'active', joined_at: now, checked_in_at: now },
         { onConflict: 'scope_id,user_id' }
       );
     if (memberError) throw memberError;
