@@ -34,6 +34,17 @@ export const colors = {
   // Not part of the palette itself — the codebase's existing error red, kept separate per
   // the handoff ("take it from the codebase's existing error color, not from this palette").
   error: '#cc3333',
+
+  // Exact brand-mark tokens from the 2026-09 logo redesign pack — used by the app icon, splash,
+  // and the mark/wordmark rendering itself. Deliberately kept separate from `brand`/`paper`
+  // above rather than repointing them: those two are threaded through many already-shipped
+  // screens (buttons, avatar letters, etc.) as part of the existing "Warm Ledger" system, and
+  // repointing them would silently recolor all of that. Only these dedicated tokens carry the
+  // pack's exact values.
+  brandMarkDark: '#544236',
+  brandMarkCream: '#F8F4ED',
+  brandRingSand: '#D8CFC2',
+  brandRingBark: '#7E6958',
 } as const;
 
 // Typography pairing: Yeseva One (display) + Source Sans 3 (everything else). Yeseva One only

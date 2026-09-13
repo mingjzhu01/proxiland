@@ -16,10 +16,13 @@ import { colors, typeStyles, fonts } from '../lib/theme';
 // The native launch screen (see app.json's expo-splash-screen config) is just a static image —
 // it can't show the "Proxiland" wordmark without baking a new image into a native rebuild. So
 // instead: hide the native splash the instant JS takes over (same cream background + same mark
-// image, so the swap is invisible), and show this JS-rendered screen — logo + wordmark — in its
-// place for a deliberate hold. Ships instantly via OTA update, no native rebuild needed to
-// change the wordmark/tagline/hold time; the mark image itself is shared with the native splash
-// (assets/splash-mark.png) so there's only one place the logo geometry is actually drawn.
+// image, so the swap is invisible), and show this JS-rendered screen — logo + wordmark + the
+// ripple-field texture behind it — in its place for a deliberate hold. Ships instantly via OTA
+// update, no native rebuild needed to change the wordmark/tagline/hold time. The mark image
+// itself (assets/splash-mark.png) is shared with the native splash so the handoff doesn't jump;
+// the ripple field (assets/splash-ripple-field.png) is JS-splash-only — it's a large enough
+// surface for rings to render cleanly, which the native launch image is not (see splashField
+// below).
 SplashScreen.preventAutoHideAsync().catch(() => {});
 SplashScreen.hideAsync().catch(() => {});
 
@@ -45,6 +48,11 @@ const MIN_SPLASH_MS = 1200;
 function BrandedSplash() {
   return (
     <View style={styles.splash}>
+      <Image
+        source={require('../assets/splash-ripple-field.png')}
+        style={styles.splashField}
+        resizeMode="cover"
+      />
       <Image source={require('../assets/splash-mark.png')} style={styles.splashMark} resizeMode="contain" />
       <Text style={styles.splashWordmark}>Proxiland</Text>
       <Text style={styles.splashTagline}>Bringing people around you closer</Text>
@@ -181,10 +189,19 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: colors.paper,
+    backgroundColor: colors.brandMarkCream,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Full-bleed ripple texture behind the mark — no mark baked into this image (that's a
+  // separate layer below) so the wordmark stays real, positioned text rather than part of a
+  // raster. Ripple rings are only used on surfaces this large; see splashMark below.
+  splashField: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  // Same plain-mark asset as the native launch screen (app.json's expo-splash-screen `image`),
+  // same size/position, so the handoff from native to this JS splash doesn't jump — only the
+  // ripple field behind it fades in as new. Native launch screens never carry ripple rings
+  // themselves (the OS crops/rescales them unpredictably across devices, which aliases the
+  // rings into moiré) — that's also why the app icon uses the plain mark only, no rings.
   splashMark: { width: 160, height: 160, marginBottom: 16 },
   // Both were tuned for the old dark-brown splash background (inkOn = the light/cream text
   // color meant to sit on a dark ground) — now that the background itself is cream, the text
