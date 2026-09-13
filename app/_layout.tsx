@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Image, StyleSheet } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts, Newsreader_400Regular } from '@expo-google-fonts/newsreader';
 import { YesevaOne_400Regular } from '@expo-google-fonts/yeseva-one';
@@ -15,9 +15,11 @@ import { colors, typeStyles, fonts } from '../lib/theme';
 
 // The native launch screen (see app.json's expo-splash-screen config) is just a static image —
 // it can't show the "Proxiland" wordmark without baking a new image into a native rebuild. So
-// instead: hide the native splash the instant JS takes over (same brown background, so the
-// swap is invisible), and show this JS-rendered screen — logo + wordmark — in its place for a
-// deliberate hold. Ships instantly via OTA update, no native rebuild needed to change it.
+// instead: hide the native splash the instant JS takes over (same cream background + same mark
+// image, so the swap is invisible), and show this JS-rendered screen — logo + wordmark — in its
+// place for a deliberate hold. Ships instantly via OTA update, no native rebuild needed to
+// change the wordmark/tagline/hold time; the mark image itself is shared with the native splash
+// (assets/splash-mark.png) so there's only one place the logo geometry is actually drawn.
 SplashScreen.preventAutoHideAsync().catch(() => {});
 SplashScreen.hideAsync().catch(() => {});
 
@@ -43,15 +45,7 @@ const MIN_SPLASH_MS = 1200;
 function BrandedSplash() {
   return (
     <View style={styles.splash}>
-      {/* Built from code (rings + a real Yeseva One "P"), not assets/icon.png — that PNG has
-          its own baked-in font for the P that doesn't match the wordmark. This only affects
-          the in-app splash; the home-screen app icon is still that separate image file. */}
-      <View style={styles.logoOuterRing}>
-        <View style={styles.logoInnerRing}>
-          <Text style={styles.logoLetter}>P</Text>
-        </View>
-        <View style={styles.logoDot} />
-      </View>
+      <Image source={require('../assets/splash-mark.png')} style={styles.splashMark} resizeMode="contain" />
       <Text style={styles.splashWordmark}>Proxiland</Text>
       <Text style={styles.splashTagline}>Bringing people around you closer</Text>
     </View>
@@ -187,39 +181,14 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: colors.brand,
+    backgroundColor: colors.paper,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoOuterRing: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    borderWidth: 1,
-    borderColor: 'rgba(245,239,230,.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 28,
-  },
-  logoInnerRing: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 1.5,
-    borderColor: colors.inkOn,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoLetter: { fontFamily: fonts.wordmark, fontSize: 26, color: colors.inkOn },
-  logoDot: {
-    position: 'absolute',
-    bottom: 4,
-    right: 2,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.brassOnDark,
-  },
-  splashWordmark: { ...typeStyles.wordmark, color: colors.inkOn },
-  splashTagline: { ...typeStyles.tagline, fontSize: 16, marginTop: 6, textTransform: 'none' },
+  splashMark: { width: 160, height: 160, marginBottom: 16 },
+  // Both were tuned for the old dark-brown splash background (inkOn = the light/cream text
+  // color meant to sit on a dark ground) — now that the background itself is cream, the text
+  // needs the dark-on-light pairing instead, or it'd be nearly invisible.
+  splashWordmark: { ...typeStyles.wordmark, color: colors.ink },
+  splashTagline: { ...typeStyles.tagline, fontSize: 16, marginTop: 6, textTransform: 'none', color: colors.textSecondary },
 });
