@@ -43,6 +43,8 @@ export const colors = {
   // pack's exact values.
   brandMarkDark: '#544236',
   brandMarkCream: '#F8F4ED',
+  // Splash tagline only (the splash brief's "brand-taupe").
+  brandTaupe: '#D8CCBE',
   brandRingSand: '#D8CFC2',
   brandRingBark: '#7E6958',
 } as const;

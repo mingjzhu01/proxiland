@@ -2,7 +2,7 @@
   "expo": {
     "name": "Proxiland",
     "slug": "proxiland",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "scheme": "proxiland",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -49,8 +49,9 @@
         "expo-splash-screen",
         {
           "image": "./assets/splash-mark.png",
+          "imageWidth": 288,
           "resizeMode": "contain",
-          "backgroundColor": "#F8F4ED"
+          "backgroundColor": "#544236"
         }
       ],
       [

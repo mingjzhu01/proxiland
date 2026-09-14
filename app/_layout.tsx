@@ -1,7 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, Text, TextInput, Image, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  Animated,
+  Easing,
+  AccessibilityInfo,
+  useWindowDimensions,
+} from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFonts, Newsreader_400Regular } from '@expo-google-fonts/newsreader';
 import { YesevaOne_400Regular } from '@expo-google-fonts/yeseva-one';
@@ -11,18 +21,15 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../lib/auth';
 import { RequestsBadgeProvider } from '../lib/requestsBadge';
 import { MessagesBadgeProvider } from '../lib/messagesBadge';
-import { colors, typeStyles, fonts } from '../lib/theme';
+import { colors, fonts } from '../lib/theme';
 
 // The native launch screen (see app.json's expo-splash-screen config) is just a static image —
 // it can't show the "Proxiland" wordmark without baking a new image into a native rebuild. So
-// instead: hide the native splash the instant JS takes over (same cream background + same mark
-// image, so the swap is invisible), and show this JS-rendered screen — logo + wordmark + the
-// ripple-field texture behind it — in its place for a deliberate hold. Ships instantly via OTA
-// update, no native rebuild needed to change the wordmark/tagline/hold time. The mark image
-// itself (assets/splash-mark.png) is shared with the native splash so the handoff doesn't jump;
-// the ripple field (assets/splash-ripple-field.png) is JS-splash-only — it's a large enough
-// surface for rings to render cleanly, which the native launch image is not (see splashField
-// below).
+// instead: hide the native splash the instant JS takes over (same #544236 ground + same
+// reverse mark, so the swap is invisible), and show this JS-rendered screen — ripple texture,
+// live-vector mark, wordmark, tagline, each animating in — in its place for a fixed 2.5s hold.
+// The native launch image carries no ripple on purpose: the OS crops/rescales it
+// unpredictably across devices, which aliases the rings.
 SplashScreen.preventAutoHideAsync().catch(() => {});
 SplashScreen.hideAsync().catch(() => {});
 
@@ -39,29 +46,171 @@ SplashScreen.hideAsync().catch(() => {});
 (TextInput as any).defaultProps = (TextInput as any).defaultProps || {};
 (TextInput as any).defaultProps.style = [{ fontFamily: fonts.sans }, (TextInput as any).defaultProps.style];
 
-// The auth check itself (reading a locally cached session) usually resolves in well under
-// 1200ms, so gating purely on isLoading isn't enough to make the screen actually register —
-// a deliberate minimum hold time is the normal way apps handle this.
+// Fixed hold from first paint, then a hard cut to the first screen (no fade out). If auth
+// bootstrap finishes early the full hold is still honoured; if it runs long the splash stays
+// up rather than showing a half-built screen.
 const APP_START_TIME = Date.now();
-const MIN_SPLASH_MS = 1200;
+const MIN_SPLASH_MS = 2500;
 
-function BrandedSplash() {
+// Splash geometry, from the brief's 390x844 reference frame. The texture is a fixed square
+// positioned from the mark's centre — never cover-fitted — so the mark sits in the void baked
+// into the texture. The two are locked together: the texture PNG's void is cut for a 144px
+// mark inside a 1200px square, so any scale applied to one must be applied to the other.
+const MARK_ASPECT = 396 / 391;
+const REF_MARK_WIDTH = 144;
+const REF_TEXTURE_SIZE = 1200;
+const LARGE_MARK_WIDTH = 192;
+const LARGE_TEXTURE_SIZE = 1600;
+const MARK_CENTRE_Y = 0.38;
+const WORDMARK_TOP_Y = 0.58;
+const SPLASH_EASE = Easing.bezier(0.2, 0.8, 0.2, 1);
+
+const MARK_PATH_BOWL =
+  'M124.6 0H245.2a137 137 0 0 1 0 273.6H124.6A18 18 0 0 1 106.6 255.6V18A18 18 0 0 1 124.6 0Z';
+const MARK_PATH_STEM =
+  'M18 108H173.3V378a18 18 0 0 1-18 18H107A107 107 0 0 1 0 289V126A18 18 0 0 1 18 108Z';
+const MARK_PATH_COUNTER =
+  'M106.6 108H243.9a36 36 0 0 1 0 72H175.9V288H142.6a36 36 0 0 1-36-36Z';
+
+function ProxilandMarkReverse({ width }: { width: number }) {
+  return (
+    <Svg viewBox="0 0 391 396" width={width} height={width * MARK_ASPECT}>
+      <Path d={MARK_PATH_BOWL} fill={colors.brandMarkCream} />
+      <Path d={MARK_PATH_STEM} fill={colors.brandMarkCream} />
+      <Path d={MARK_PATH_COUNTER} fill={colors.brandMarkDark} />
+    </Svg>
+  );
+}
+
+function BrandedSplash({ fontsLoaded }: { fontsLoaded: boolean }) {
+  const { width, height } = useWindowDimensions();
+
+  const large = width >= 600;
+  let markWidth = large ? LARGE_MARK_WIDTH : REF_MARK_WIDTH;
+  let textureSize = large ? LARGE_TEXTURE_SIZE : REF_TEXTURE_SIZE;
+  // The square must overhang every edge of the viewport while centred on the mark, so its
+  // border never enters the frame. If a viewport needs a bigger square, the mark scales by the
+  // same factor to keep the void alignment.
+  const overhangSize = 2 * Math.max(width / 2, height * (1 - MARK_CENTRE_Y));
+  if (overhangSize > textureSize) {
+    const factor = overhangSize / textureSize;
+    textureSize *= factor;
+    markWidth *= factor;
+  }
+  const markHeight = markWidth * MARK_ASPECT;
+  const centreX = width / 2;
+  const centreY = height * MARK_CENTRE_Y;
+
+  const mountedAt = useRef(Date.now()).current;
+  const field = useRef(new Animated.Value(0)).current;
+  const mark = useRef(new Animated.Value(0)).current;
+  const wordmark = useRef(new Animated.Value(0)).current;
+  const tagline = useRef(new Animated.Value(0)).current;
+  const reduceMotionRef = useRef(false);
+
+  const settle = () => {
+    for (const v of [field, mark, wordmark, tagline]) {
+      v.stopAnimation();
+      v.setValue(1);
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((reduced) => {
+        if (cancelled || !reduced) return;
+        reduceMotionRef.current = true;
+        settle();
+      })
+      .catch(() => {});
+
+    Animated.parallel([
+      Animated.timing(field, { toValue: 1, duration: 800, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+      Animated.timing(mark, { toValue: 1, duration: 420, easing: SPLASH_EASE, useNativeDriver: true }),
+    ]).start();
+
+    return () => {
+      cancelled = true;
+    };
+    // Mount-only: the entry animation runs once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The wordmark and tagline only start once the fonts they need have resolved — a fallback
+  // flash on a 2.5s screen is the whole screen. In the normal case fonts are ready at mount,
+  // so the delays below run from t0; if they land late, the text comes in then, without the
+  // delay being re-applied on top of the wait.
+  useEffect(() => {
+    if (!fontsLoaded) return;
+    if (reduceMotionRef.current) {
+      settle();
+      return;
+    }
+    const elapsed = Date.now() - mountedAt;
+    Animated.parallel([
+      Animated.timing(wordmark, {
+        toValue: 1,
+        duration: 460,
+        delay: Math.max(0, 190 - elapsed),
+        easing: SPLASH_EASE,
+        useNativeDriver: true,
+      }),
+      Animated.timing(tagline, {
+        toValue: 1,
+        duration: 520,
+        delay: Math.max(0, 430 - elapsed),
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ]).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fontsLoaded]);
+
   return (
     <View style={styles.splash}>
-      <Image
-        source={require('../assets/splash-ripple-field.png')}
-        style={styles.splashField}
-        resizeMode="contain"
+      <StatusBar style="light" />
+      <Animated.Image
+        source={require('../assets/proxiland-splash-texture-dark.png')}
+        style={{
+          position: 'absolute',
+          width: textureSize,
+          height: textureSize,
+          left: centreX - textureSize / 2,
+          top: centreY - textureSize / 2,
+          opacity: field,
+        }}
+        resizeMode="stretch"
       />
-      {/* Pinned so the mark's own vertical center lands on the screen's true center — matching
-          where the ripple field's void sits (resizeMode="cover" centers that image too) — rather
-          than the mark+wordmark+tagline block being centered as a group, which pushed the mark
-          above that point. */}
-      <View style={styles.splashContent}>
-        <Image source={require('../assets/splash-mark.png')} style={styles.splashMark} resizeMode="contain" />
-        <Text style={styles.splashWordmark}>Proxiland</Text>
-        <Text style={styles.splashTagline}>Bringing people around you closer</Text>
-      </View>
+      <Animated.View
+        style={{
+          position: 'absolute',
+          left: centreX - markWidth / 2,
+          top: centreY - markHeight / 2,
+          opacity: mark,
+          transform: [{ scale: mark.interpolate({ inputRange: [0, 1], outputRange: [0.955, 1] }) }],
+        }}
+      >
+        <ProxilandMarkReverse width={markWidth} />
+      </Animated.View>
+      {fontsLoaded ? (
+        <View style={[styles.splashType, { top: height * WORDMARK_TOP_Y }]}>
+          <Animated.Text
+            style={[
+              styles.splashWordmark,
+              {
+                opacity: wordmark,
+                transform: [{ translateY: wordmark.interpolate({ inputRange: [0, 1], outputRange: [7, 0] }) }],
+              },
+            ]}
+          >
+            Proxiland
+          </Animated.Text>
+          <Animated.Text style={[styles.splashTagline, { opacity: tagline }]}>
+            Bringing people around you closer
+          </Animated.Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -161,12 +310,11 @@ function RootNavigation() {
         <Stack.Screen name="organizer/[id]/manage" options={{ headerShown: false }} />
         <Stack.Screen name="organizer/[id]/edit" options={{ headerShown: false }} />
       </Stack>
-      {/* Only mount the splash's actual text/logo once fonts are ready — mounting it earlier
-          and letting the font "swap in" later doesn't work: once iOS paints a Text with the
-          fallback font, it doesn't get redrawn just because the custom font becomes available
-          a moment afterward. Until then, show the same brand-colored ground with nothing on
-          it — visually seamless against the native launch screen underneath. */}
-      {showBrandedSplash ? (fontsLoaded ? <BrandedSplash /> : <View style={styles.splash} />) : null}
+      {/* The splash mounts immediately (ground + texture + vector mark need no fonts) and only
+          adds the wordmark/tagline once fonts are ready — mounting Text earlier and letting the
+          font "swap in" doesn't work: once iOS paints a Text with the fallback font, it doesn't
+          get redrawn when the custom font arrives a moment later. */}
+      {showBrandedSplash ? <BrandedSplash fontsLoaded={fontsLoaded} /> : null}
     </>
   );
 }
@@ -175,6 +323,10 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        {/* Rendered before the tree so it mounts first: the splash's own light-style StatusBar
+            mounts after it and wins while the splash is up, and this default takes back over
+            when the splash unmounts. */}
+        <StatusBar style="auto" />
         <AuthProvider>
           <RequestsBadgeProvider>
             <MessagesBadgeProvider>
@@ -182,7 +334,6 @@ export default function RootLayout() {
             </MessagesBadgeProvider>
           </RequestsBadgeProvider>
         </AuthProvider>
-        <StatusBar style="auto" />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
@@ -195,38 +346,25 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: colors.brandMarkCream,
+    backgroundColor: colors.brandMarkDark,
+    overflow: 'hidden',
   },
-  // Ripple texture behind the mark, at its native 1:1 square aspect (matching the brand
-  // reference file exactly) — no mark baked into this image (that's a separate layer below) so
-  // the wordmark stays real, positioned text rather than part of a raster. resizeMode="contain"
-  // (not "cover") is deliberate: cover would crop a square image to fill a tall phone screen,
-  // slicing the rings into vertical streaks instead of circles. Contain shows the whole square
-  // undistorted, letterboxed above/below in the same cream as the screen background, so the
-  // letterbox is invisible and the rings read exactly as they do in the reference file.
-  splashField: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  // Pinned by its top edge to the screen's vertical center, then shifted up by half the mark's
-  // own height (translateY) — not centered as a mark+wordmark+tagline block — so the mark's
-  // center (not the block's center) lines up with the ripple field's void, which resizeMode
-  // "contain" also centers on screen. The wordmark/tagline flow below the mark inside this same
-  // block without disturbing that.
-  splashContent: {
-    position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    transform: [{ translateY: -80 }],
+  // Type block: top edge at 58% of the viewport, centred; sits clear of the innermost rings.
+  splashType: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  // Yeseva One has exactly one weight — never set fontWeight here.
+  splashWordmark: {
+    fontFamily: fonts.wordmark,
+    fontSize: 42,
+    lineHeight: 45,
+    letterSpacing: 42 * 0.005,
+    color: colors.brandMarkCream,
   },
-  // Same plain-mark asset as the native launch screen (app.json's expo-splash-screen `image`),
-  // same size, so the handoff from native to this JS splash doesn't jump — only the ripple field
-  // behind it fades in as new. Native launch screens never carry ripple rings themselves (the OS
-  // crops/rescales them unpredictably across devices, which aliases the rings into moiré) —
-  // that's also why the app icon uses the plain mark only, no rings.
-  splashMark: { width: 160, height: 160, marginBottom: 4 },
-  // Both were tuned for the old dark-brown splash background (inkOn = the light/cream text
-  // color meant to sit on a dark ground) — now that the background itself is cream, the text
-  // needs the dark-on-light pairing instead, or it'd be nearly invisible.
-  splashWordmark: { ...typeStyles.wordmark, color: colors.ink },
-  splashTagline: { ...typeStyles.tagline, fontSize: 18, marginTop: 6, textTransform: 'none', color: colors.brandMarkDark },
+  splashTagline: {
+    fontFamily: fonts.sans,
+    fontSize: 17,
+    lineHeight: 17 * 1.45,
+    letterSpacing: 17 * 0.035,
+    color: colors.brandTaupe,
+    marginTop: 18,
+  },
 });
