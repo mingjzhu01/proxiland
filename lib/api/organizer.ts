@@ -1,6 +1,7 @@
-// Organizer/admin event management — every function here maps to a security-definer RPC from
-// migration 0060 that re-checks created_by/is_admin server-side regardless of what the client
-// shows. Only reachable from app/organizer/* screens, themselves gated on useAuth().isAdmin.
+// Event creation and management — every function here maps to a security-definer RPC that
+// re-checks permissions server-side regardless of what the client shows. Creation (createEvent)
+// is open to any user with a completed profile as of migration 0063; everything else still
+// requires created_by/is_admin and is only reachable from app/organizer/*.
 import { supabase } from '../supabase';
 
 export type OrganizedEvent = {
@@ -36,7 +37,12 @@ export async function getMyOrganizedEvents(): Promise<OrganizedEvent[]> {
   return data ?? [];
 }
 
-export async function createEvent(draft: EventDraft): Promise<string> {
+// Creates the event live (not a draft) and returns its share credentials — the raw invite token
+// and 6-character code are returned exactly once here and never again; only their hashes are
+// stored. Call rotateEventInvite to reissue if they're lost.
+export async function createEvent(
+  draft: EventDraft
+): Promise<{ eventId: string; rawToken: string; rawShortCode: string }> {
   const { data, error } = await supabase.rpc('create_event', {
     p_name: draft.name,
     p_organizer_name: draft.organizerName,
@@ -51,7 +57,9 @@ export async function createEvent(draft: EventDraft): Promise<string> {
     p_timezone: draft.timezone,
   });
   if (error) throw error;
-  return data as string;
+  const row = data && data.length > 0 ? data[0] : null;
+  if (!row) throw new Error('No event returned');
+  return { eventId: row.event_id, rawToken: row.raw_token, rawShortCode: row.raw_short_code };
 }
 
 export type EventForEdit = OrganizedEvent & { lat: number | null; lng: number | null; radius_m: number | null };

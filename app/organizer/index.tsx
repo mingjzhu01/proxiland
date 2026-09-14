@@ -3,7 +3,6 @@ import { View, Text, FlatList, Pressable, StyleSheet, Alert } from 'react-native
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '../../lib/auth';
 import { getMyOrganizedEvents, type OrganizedEvent } from '../../lib/api/organizer';
 import { SectionLabel } from '../../components/SectionLabel';
 import { colors, spacing, typeStyles, fonts, radii } from '../../lib/theme';
@@ -18,7 +17,6 @@ const STATUS_LABEL: Record<OrganizedEvent['status'], string> = {
 export default function OrganizerHome() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { isAdmin } = useAuth();
   const [events, setEvents] = useState<OrganizedEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -39,14 +37,6 @@ export default function OrganizerHome() {
     }, [load])
   );
 
-  if (!isAdmin) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.notAuthorizedText}>You don't have organiser access.</Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <FlatList
@@ -63,7 +53,7 @@ export default function OrganizerHome() {
               </Pressable>
             </View>
             <Text style={styles.headline}>Your events</Text>
-            <Pressable style={styles.newButton} onPress={() => router.push('/organizer/new')}>
+            <Pressable style={styles.newButton} onPress={() => router.push('/new-event')}>
               <Ionicons name="add" size={18} color={colors.inkOn} />
               <Text style={styles.newButtonText}>New event</Text>
             </Pressable>
@@ -92,8 +82,6 @@ export default function OrganizerHome() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paper },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: colors.paper },
-  notAuthorizedText: { fontFamily: fonts.sans, fontSize: 14, color: colors.textTertiary, textAlign: 'center' },
   content: { paddingBottom: 60 },
   header: { paddingHorizontal: spacing.gutter, paddingBottom: 16 },
   topRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },

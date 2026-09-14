@@ -14,6 +14,7 @@ import { LetteredAvatar } from '../../components/LetteredAvatar';
 import { PrimaryButton } from '../../components/Buttons';
 import { SectionLabel } from '../../components/SectionLabel';
 import { VisibilityToggle } from '../../components/VisibilityToggle';
+import { EventEntryCard, type EventEntryMode } from '../../components/EventEntryCard';
 import { getMyActiveVisibility } from '../../lib/api/visibility';
 import { getMyConnections } from '../../lib/api/connections';
 import { getCurrentCoords } from '../../lib/location';
@@ -66,6 +67,7 @@ export default function Nearby() {
   const { hasProfile, isDemo } = useAuth();
   const [visibilityExpiresAt, setVisibilityExpiresAt] = useState<string | null>(null);
   const [visibilitySheetOpen, setVisibilitySheetOpen] = useState(false);
+  const [entryMode, setEntryMode] = useState<EventEntryMode>('prompt');
   const [aggregate, setAggregate] = useState<AggregateView | null>(null);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [incomingReveals, setIncomingReveals] = useState<IncomingRevealRequest[]>([]);
@@ -287,9 +289,16 @@ export default function Nearby() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 26 }]}>
+        {/* Title and the Go visible pill share a baseline row; the join affordance is the card
+            below, not a glyph up here — the old top-right QR button was the thing nobody found,
+            which is what this redesign set out to fix. */}
         <View style={styles.topRow}>
-          <View style={styles.spacer} />
+          <Text style={styles.headline} numberOfLines={1}>
+            {peopleNearby > 0
+              ? `${peopleNearby} ${peopleNearby === 1 ? 'person' : 'people'} nearby`
+              : "Who's nearby"}
+          </Text>
           {isDemo ? (
             <View style={styles.demoPill}>
               <Text style={styles.demoPillText}>Demo mode</Text>
@@ -298,19 +307,15 @@ export default function Nearby() {
           <Pressable style={styles.visibilityPill} onPress={() => setVisibilitySheetOpen(true)}>
             {isVisible ? <View style={styles.liveDot} /> : null}
             <Text style={styles.visibilityPillText}>
-              {isVisible ? `Visible · ${timeRemainingShort(visibilityExpiresAt!)}` : 'Not visible'}
+              {isVisible ? `Visible · ${timeRemainingShort(visibilityExpiresAt!)}` : 'Go visible'}
             </Text>
-          </Pressable>
-          <Pressable style={styles.scanButton} onPress={() => router.push('/scan-event')}>
-            <Ionicons name="qr-code-outline" size={18} color={colors.inkOn} />
           </Pressable>
         </View>
 
-        <Text style={styles.headline}>
-          {peopleNearby > 0
-            ? `${peopleNearby} ${peopleNearby === 1 ? 'person is' : 'people are'} working near you`
-            : "Who's working nearby"}
-        </Text>
+        <View style={styles.entryCardWrap}>
+          <EventEntryCard mode={entryMode} onModeChange={setEntryMode} onJoined={load} />
+        </View>
+        <View style={styles.entryDivider} />
 
         {myActiveEvents.map((e) => (
           <Pressable key={e.id} style={styles.eventBanner} onPress={() => router.push(`/event/${e.id}`)}>
@@ -354,13 +359,20 @@ export default function Nearby() {
         keyExtractor={(item) => item.key}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={load} />}
         ListEmptyComponent={
-          !isLoading ? (
-            <Text style={styles.empty}>
-              {isVisible
-                ? 'No one nearby right now.'
-                : "Turn on your visibility above to browse who's nearby."}
-            </Text>
-          ) : null
+          // Hidden while the card above is scanning or taking a code — the camera pane is tall,
+          // and a second block of copy under it just pushes the whole thing off screen.
+          isLoading || entryMode !== 'prompt' ? null : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateTitle}>
+                {isVisible ? 'No one nearby right now' : "Go visible to see who's around you"}
+              </Text>
+              <Text style={styles.emptyStateBody}>
+                {isVisible
+                  ? 'Check back in a bit — this updates as people arrive.'
+                  : 'You stay hidden until you switch it on.'}
+              </Text>
+            </View>
+          )
         }
         renderItem={({ item }) => {
           if (item.kind === 'header') {
@@ -455,40 +467,60 @@ export default function Nearby() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.paper },
+  container: { flex: 1, backgroundColor: colors.brandMarkCream },
   header: {
-    paddingHorizontal: spacing.gutter,
-    paddingTop: 14,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderColor: colors.rule,
+    paddingHorizontal: 18,
+    paddingTop: 26,
+    paddingBottom: 0,
   },
-  topRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  spacer: { flex: 1 },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   demoPill: { backgroundColor: colors.brass, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
   demoPillText: { fontFamily: fonts.sansSemibold, color: colors.inkOn, fontSize: 11 },
   visibilityPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: colors.rule,
+    borderColor: colors.brandSand,
     borderRadius: radii.pill,
-    paddingHorizontal: 11,
-    paddingVertical: 5,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
   },
   liveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.live },
-  visibilityPillText: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.ink },
-  scanButton: {
-    width: 34,
-    height: 34,
-    borderRadius: radii.iconButton,
-    backgroundColor: colors.ink,
-    alignItems: 'center',
-    justifyContent: 'center',
+  visibilityPillText: { fontFamily: fonts.sans, fontSize: 15, color: colors.brandMarkDark },
+  headline: {
+    flexShrink: 1,
+    fontFamily: fonts.wordmark,
+    fontSize: 33,
+    lineHeight: 35,
+    color: colors.brandMarkDark,
   },
-  headline: { ...typeStyles.screenHeadline, marginTop: 14 },
+  // The card is wider than the text gutter by 7px each side so its edges bracket the title and
+  // pill above it; the divider below spans that same widened width.
+  entryCardWrap: { marginTop: 16 },
+  entryDivider: {
+    height: 1,
+    backgroundColor: colors.hairline,
+    marginTop: 4,
+    marginHorizontal: -7,
+  },
+  emptyState: { maxWidth: 330, alignSelf: 'center', paddingTop: 26, paddingHorizontal: 10 },
+  emptyStateTitle: {
+    fontFamily: fonts.sansSemibold,
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.brandMarkDark,
+    textAlign: 'center',
+  },
+  emptyStateBody: {
+    fontFamily: fonts.sans,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.brandInk,
+    textAlign: 'center',
+    marginTop: 7,
+  },
   eventBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -510,7 +542,6 @@ const styles = StyleSheet.create({
     borderColor: colors.rule,
   },
   incompleteBannerText: { fontFamily: fonts.sans, fontSize: 12, color: colors.brass },
-  empty: { fontFamily: fonts.sans, padding: 24, textAlign: 'center', color: colors.textMuted, fontSize: 14 },
   sectionHeader: { marginHorizontal: spacing.gutter, marginTop: 22, marginBottom: 10 },
   wantsCard: { marginHorizontal: spacing.gutter, marginVertical: 6, gap: 12 },
   wantsRow: { flexDirection: 'row', gap: 12 },

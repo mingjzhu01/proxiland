@@ -27,7 +27,7 @@ import { colors, fonts } from '../lib/theme';
 // it can't show the "Proxiland" wordmark without baking a new image into a native rebuild. So
 // instead: hide the native splash the instant JS takes over (same #F8F4ED ground + same
 // default-tone mark, so the swap is invisible), and show this JS-rendered screen — ripple texture,
-// live-vector mark, wordmark, tagline, each animating in — in its place for a fixed 2.5s hold.
+// live-vector mark, wordmark, tagline, each animating in — in its place for a fixed 3.5s hold.
 // The native launch image carries no ripple on purpose: the OS crops/rescales it
 // unpredictably across devices, which aliases the rings.
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -139,7 +139,7 @@ function BrandedSplash({ fontsLoaded }: { fontsLoaded: boolean }) {
   }, []);
 
   // The wordmark and tagline only start once the fonts they need have resolved — a fallback
-  // flash on a 2.5s screen is the whole screen. In the normal case fonts are ready at mount,
+  // flash on a 3.5s screen is the whole screen. In the normal case fonts are ready at mount,
   // so the delays below run from t0; if they land late, the text comes in then, without the
   // delay being re-applied on top of the wait.
   useEffect(() => {
@@ -278,6 +278,9 @@ function RootNavigation() {
             header, so nothing had set one until now. */}
         <Stack.Screen name="(tabs)" options={{ title: '', headerBackTitle: '' }} />
         <Stack.Screen name="edit-profile" />
+        {/* Both render their own header/back control, same as the other pushed screens. */}
+        <Stack.Screen name="new-event" options={{ headerShown: false }} />
+        <Stack.Screen name="schedule" options={{ headerShown: false }} />
         {/* headerShown: false — the screen renders its own back/menu header, per the visual
             redesign. */}
         <Stack.Screen name="profile/[id]" options={{ headerShown: false }} />
@@ -307,7 +310,6 @@ function RootNavigation() {
             accounts. Each screen renders its own header/back control, same pattern as the
             other full-bleed-header screens above — headerShown: false throughout. */}
         <Stack.Screen name="organizer/index" options={{ headerShown: false }} />
-        <Stack.Screen name="organizer/new" options={{ headerShown: false }} />
         <Stack.Screen name="organizer/[id]/manage" options={{ headerShown: false }} />
         <Stack.Screen name="organizer/[id]/edit" options={{ headerShown: false }} />
       </Stack>

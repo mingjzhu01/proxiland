@@ -1,8 +1,9 @@
-// Shared create/edit form for organizer events — app/organizer/new.tsx and
-// app/organizer/[id]/edit.tsx both render this with different initial values and a different
-// submit handler. Coordinates are plain numeric fields (not a map picker) and timezone
-// defaults to the organizer's own device zone, read-only — both deliberate scope cuts for the
-// pilot, not oversights.
+// Edit form for organizer events — only app/organizer/[id]/edit.tsx renders this now. Creating
+// an event moved to app/new-event.tsx when hosting opened up to every user, and that screen
+// carries the events-entry design; this one keeps the older organizer styling deliberately,
+// since it's admin-facing and not part of that handoff. Coordinates are plain numeric fields
+// (not a map picker) and timezone defaults to the organizer's own device zone, read-only —
+// both deliberate scope cuts for the pilot, not oversights.
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Card } from '../Card';

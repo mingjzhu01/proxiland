@@ -1,14 +1,15 @@
 import { useCallback, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, RefreshControl, Alert, Linking } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getScheduledCoffees, hideRequestForMe } from '../../lib/api/requests';
-import { supabase } from '../../lib/supabase';
-import { SwipeToDelete } from '../../components/SwipeToDelete';
-import { SectionLabel } from '../../components/SectionLabel';
-import { SecondaryButton } from '../../components/Buttons';
-import { colors, typeStyles, spacing, radii, fonts } from '../../lib/theme';
-import type { ConnectionRequest } from '../../lib/types';
+import { getScheduledCoffees, hideRequestForMe } from '../lib/api/requests';
+import { supabase } from '../lib/supabase';
+import { SwipeToDelete } from '../components/SwipeToDelete';
+import { SectionLabel } from '../components/SectionLabel';
+import { SecondaryButton } from '../components/Buttons';
+import { colors, typeStyles, spacing, radii, fonts } from '../lib/theme';
+import type { ConnectionRequest } from '../lib/types';
 
 function dayLabel(meetingAt: string | null): { key: string; label: string; isNear: boolean } {
   if (!meetingAt) return { key: 'unscheduled', label: 'Unscheduled', isNear: false };
@@ -82,7 +83,13 @@ export default function Schedule() {
       style={styles.container}
       refreshControl={<RefreshControl refreshing={isLoading} onRefresh={load} tintColor={colors.brand} />}
     >
+      {/* Own back control rather than a native header: this was a tab until the center slot went
+          to the create button, and keeping its full-bleed headline treatment matches the other
+          pushed screens (event, chat, organizer) that all render their own chrome. */}
       <View style={[styles.header, { paddingTop: insets.top + 14 }]}>
+        <Pressable onPress={() => router.back()} hitSlop={10} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={24} color={colors.brandMarkDark} />
+        </Pressable>
         <Text style={styles.headline}>
           {coffees.length > 0
             ? `${coffees.length} ${coffees.length === 1 ? 'coffee' : 'coffees'} this week`
@@ -150,6 +157,7 @@ export default function Schedule() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paper },
   header: { paddingHorizontal: spacing.gutter, paddingTop: 14, paddingBottom: 8 },
+  backButton: { marginLeft: -6, marginBottom: 2 },
   headline: { ...typeStyles.screenHeadline, marginTop: 8 },
   empty: { fontFamily: fonts.sans, padding: 24, textAlign: 'center', color: colors.textMuted, fontSize: 14 },
   groupLabel: { marginHorizontal: spacing.gutter, marginTop: 20, marginBottom: 8 },

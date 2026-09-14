@@ -43,11 +43,22 @@ export const colors = {
   // pack's exact values.
   brandMarkDark: '#544236',
   brandMarkCream: '#F8F4ED',
-  // Splash tagline only (the brand brief's "brand-ink").
+  // Body and secondary text on brand surfaces, and inactive tab items (the brief's "brand-ink").
   brandInk: '#6E5C4C',
   // Ripple ring colours are baked into the texture PNGs; these are reference values, never type.
+  // brandSand doubles as the input/border sand on the events-entry screens.
   brandRingSand: '#D2C8BA',
   brandRingBark: '#7E6958',
+
+  // Surfaces from the events-entry handoff. These sit on the brand-mark palette above (cream
+  // ground, ink text) rather than the older Warm Ledger tokens, so the screens that use them
+  // read as one system with the splash and icon.
+  brandSand: '#D2C8BA',
+  card: '#FFFDF9',
+  hairline: '#E4DBCC',
+  tabBar: '#F2EDE4',
+  insetPill: '#E9E1D5',
+  scrim: 'rgba(84,66,54,.34)',
 } as const;
 
 // Typography pairing: Yeseva One (display) + Source Sans 3 (everything else). Yeseva One only

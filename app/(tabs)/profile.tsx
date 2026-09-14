@@ -185,6 +185,14 @@ export default function MyProfile() {
       </View>
 
       <SecondaryButton label="Edit profile" onPress={() => router.push('/edit-profile')} />
+      {/* Schedule lived in the tab bar until the center slot went to the create button. It's
+          lower-traffic than the four remaining tabs, so it sits here rather than costing a
+          tab — reachable in one tap from You. */}
+      <Pressable style={styles.linkRow} onPress={() => router.push('/schedule')}>
+        <Ionicons name="calendar-outline" size={19} color={colors.textSecondary} />
+        <Text style={styles.linkRowText}>Scheduled coffees</Text>
+        <Ionicons name="chevron-forward" size={17} color={colors.textMuted} />
+      </Pressable>
       <Pressable style={styles.signOutLink} onPress={() => supabase.auth.signOut()}>
         <Text style={styles.signOutLinkText}>Sign out</Text>
       </Pressable>
@@ -273,6 +281,19 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   securityBannerButtonText: { fontFamily: fonts.sansSemibold, color: colors.inkOn, fontSize: 13 },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.rule,
+    borderRadius: radii.card,
+  },
+  linkRowText: { flex: 1, fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.ink },
   signOutLink: { alignItems: 'center', paddingVertical: 16 },
   signOutLinkText: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.textMuted },
 });
