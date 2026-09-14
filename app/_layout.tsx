@@ -51,7 +51,7 @@ function BrandedSplash() {
       <Image
         source={require('../assets/splash-ripple-field.png')}
         style={styles.splashField}
-        resizeMode="cover"
+        resizeMode="contain"
       />
       {/* Pinned so the mark's own vertical center lands on the screen's true center — matching
           where the ripple field's void sits (resizeMode="cover" centers that image too) — rather
@@ -197,14 +197,18 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: colors.brandMarkCream,
   },
-  // Full-bleed ripple texture behind the mark — no mark baked into this image (that's a
-  // separate layer below) so the wordmark stays real, positioned text rather than part of a
-  // raster. Ripple rings are only used on surfaces this large; see splashMark below.
+  // Ripple texture behind the mark, at its native 1:1 square aspect (matching the brand
+  // reference file exactly) — no mark baked into this image (that's a separate layer below) so
+  // the wordmark stays real, positioned text rather than part of a raster. resizeMode="contain"
+  // (not "cover") is deliberate: cover would crop a square image to fill a tall phone screen,
+  // slicing the rings into vertical streaks instead of circles. Contain shows the whole square
+  // undistorted, letterboxed above/below in the same cream as the screen background, so the
+  // letterbox is invisible and the rings read exactly as they do in the reference file.
   splashField: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   // Pinned by its top edge to the screen's vertical center, then shifted up by half the mark's
   // own height (translateY) — not centered as a mark+wordmark+tagline block — so the mark's
   // center (not the block's center) lines up with the ripple field's void, which resizeMode
-  // "cover" also centers on screen. The wordmark/tagline flow below the mark inside this same
+  // "contain" also centers on screen. The wordmark/tagline flow below the mark inside this same
   // block without disturbing that.
   splashContent: {
     position: 'absolute',
