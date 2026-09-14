@@ -135,7 +135,7 @@ export default function NewEvent() {
     setIsSubmitting(true);
     try {
       const parsedRadius = parseInt(radiusM, 10);
-      const { eventId } = await createEvent({
+      const { eventId, rawToken, rawShortCode } = await createEvent({
         name: name.trim(),
         organizerName: hostName.trim() || null,
         description: description.trim() || null,
@@ -150,8 +150,12 @@ export default function NewEvent() {
       });
       // The event is already live and joinable at this point. The share view (QR + code) isn't
       // designed yet — flagged as a follow-up in the handoff — so this lands on the existing
-      // manage screen, which already shows the invite link and short code.
-      router.replace(`/organizer/${eventId}/manage`);
+      // manage screen. The credentials go along as params: they're only ever returned once, and
+      // without them the manage screen would have to rotate (invalidating this code) to show one.
+      router.replace({
+        pathname: '/organizer/[id]/manage',
+        params: { id: eventId, token: rawToken, code: rawShortCode },
+      });
     } catch (error: any) {
       Alert.alert('Could not create event', error.message ?? String(error));
     } finally {

@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Animated, Alert } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import { getEventByShortCode, joinEvent } from '../lib/api/events';
 import { colors, fonts } from '../lib/theme';
@@ -175,6 +176,22 @@ function CodeState({
   const characters = Array.from({ length: CODE_LENGTH }, (_, i) => code[i] ?? '');
   const isComplete = code.length === CODE_LENGTH;
 
+  function applyCode(text: string) {
+    setError(null);
+    setCode(text.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, CODE_LENGTH));
+  }
+
+  // The hidden input does accept a native paste, but there's nothing visible to long-press on —
+  // so an explicit action is the discoverable path for a code that arrived by message.
+  async function handlePaste() {
+    const text = (await Clipboard.getStringAsync()).trim();
+    if (!text) {
+      setError('Nothing to paste — copy the code from the host first.');
+      return;
+    }
+    applyCode(text);
+  }
+
   async function handleJoin() {
     if (!isComplete || isJoining) return;
     setIsJoining(true);
@@ -220,15 +237,16 @@ function CodeState({
           ref={inputRef}
           style={styles.hiddenInput}
           value={code}
-          onChangeText={(text) => {
-            setError(null);
-            setCode(text.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, CODE_LENGTH));
-          }}
+          onChangeText={applyCode}
           autoCapitalize="characters"
           autoCorrect={false}
           maxLength={CODE_LENGTH}
           keyboardType="ascii-capable"
         />
+      </Pressable>
+
+      <Pressable onPress={handlePaste} hitSlop={8} style={styles.pasteAction}>
+        <Text style={styles.pasteActionText}>Paste code</Text>
       </Pressable>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -388,6 +406,8 @@ const styles = StyleSheet.create({
   codeCellActive: { borderColor: colors.brandMarkDark, backgroundColor: colors.brandMarkCream },
   codeChar: { fontFamily: fonts.sansSemibold, fontSize: 22, color: colors.brandMarkDark },
   hiddenInput: { position: 'absolute', opacity: 0, width: '100%', height: '100%' },
+  pasteAction: { alignSelf: 'flex-end', marginTop: 10 },
+  pasteActionText: { fontFamily: fonts.sansSemibold, fontSize: 14, color: colors.brandInk },
   // No red anywhere in this palette, and the handoff is explicit that one shouldn't be invented.
   error: {
     fontFamily: fonts.sans,

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -22,15 +23,27 @@ import { logSessionEvent } from '../../../lib/api/instrumentation';
 import { colors, spacing, typeStyles, fonts, radii } from '../../../lib/theme';
 
 export default function ManageEvent() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // token/code arrive only when this screen is reached straight from creating the event — the
+  // credentials are returned exactly once by create_event, so they're handed over here rather
+  // than forcing a rotate (which would invalidate the code just issued) to display one.
+  const { id, token, code } = useLocalSearchParams<{ id: string; token?: string; code?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [event, setEvent] = useState<OrganizedEvent | null>(null);
   const [summary, setSummary] = useState<EventManagementSummary | null>(null);
   const [participants, setParticipants] = useState<OrganizerParticipant[]>([]);
-  const [invite, setInvite] = useState<{ rawToken: string; rawShortCode: string } | null>(null);
+  const [invite, setInvite] = useState<{ rawToken: string; rawShortCode: string } | null>(
+    token && code ? { rawToken: token, rawShortCode: code } : null
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isBusy, setIsBusy] = useState(false);
+  const [copied, setCopied] = useState<'link' | 'code' | null>(null);
+
+  async function copyToClipboard(kind: 'link' | 'code', value: string) {
+    await Clipboard.setStringAsync(value);
+    setCopied(kind);
+    setTimeout(() => setCopied((current) => (current === kind ? null : current)), 1500);
+  }
 
   const load = useCallback(async () => {
     try {
@@ -183,14 +196,26 @@ export default function ManageEvent() {
         <Text style={styles.cardTitle}>Invitation</Text>
         {invite ? (
           <>
-            <Text style={styles.inviteLabel}>Link (tap and hold to copy)</Text>
-            <Text style={styles.inviteValue} selectable>
-              proxiland://event-join/{invite.rawToken}
-            </Text>
+            <Text style={styles.inviteLabel}>Link</Text>
+            <View style={styles.inviteRow}>
+              <Text style={[styles.inviteValue, styles.inviteRowText]} selectable>
+                proxiland://event-join/{invite.rawToken}
+              </Text>
+              <CopyButton
+                copied={copied === 'link'}
+                onPress={() => copyToClipboard('link', `proxiland://event-join/${invite.rawToken}`)}
+              />
+            </View>
             <Text style={styles.inviteLabel}>Event code</Text>
-            <Text style={styles.inviteCode} selectable>
-              {invite.rawShortCode}
-            </Text>
+            <View style={styles.inviteRow}>
+              <Text style={[styles.inviteCode, styles.inviteRowText]} selectable>
+                {invite.rawShortCode}
+              </Text>
+              <CopyButton
+                copied={copied === 'code'}
+                onPress={() => copyToClipboard('code', invite.rawShortCode)}
+              />
+            </View>
             <Text style={styles.inviteWarning}>
               Shown once — save it now. Generating a new invite invalidates this one.
             </Text>
@@ -260,6 +285,20 @@ const styles = StyleSheet.create({
   inviteValue: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink },
   inviteCode: { fontFamily: fonts.sansSemibold, fontSize: 22, letterSpacing: 4, color: colors.ink },
   inviteWarning: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.brass, marginTop: 10, marginBottom: 14 },
+  inviteRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  inviteRowText: { flex: 1 },
+  copyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 7,
+    paddingHorizontal: 11,
+    borderRadius: radii.button,
+    borderWidth: 1,
+    borderColor: colors.rule,
+    backgroundColor: colors.surface,
+  },
+  copyButtonText: { fontFamily: fonts.sansSemibold, fontSize: 12.5, color: colors.ink },
   sectionHeading: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.ink, marginTop: 28, marginBottom: 10 },
   emptyText: { fontFamily: fonts.sans, fontSize: 13, color: colors.textTertiary },
   participantRow: {
@@ -276,3 +315,12 @@ const styles = StyleSheet.create({
   removeButton: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: radii.pill, borderWidth: 1, borderColor: colors.error },
   removeButtonText: { fontFamily: fonts.sansSemibold, fontSize: 12, color: colors.error },
 });
+
+function CopyButton({ copied, onPress }: { copied: boolean; onPress: () => void }) {
+  return (
+    <Pressable style={styles.copyButton} onPress={onPress} hitSlop={6} accessibilityLabel="Copy">
+      <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={14} color={colors.ink} />
+      <Text style={styles.copyButtonText}>{copied ? 'Copied' : 'Copy'}</Text>
+    </Pressable>
+  );
+}
