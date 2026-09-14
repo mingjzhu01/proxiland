@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
   // behind it fades in as new. Native launch screens never carry ripple rings themselves (the OS
   // crops/rescales them unpredictably across devices, which aliases the rings into moiré) —
   // that's also why the app icon uses the plain mark only, no rings.
-  splashMark: { width: 160, height: 160, marginBottom: 8 },
+  splashMark: { width: 160, height: 160, marginBottom: 4 },
   // Both were tuned for the old dark-brown splash background (inkOn = the light/cream text
   // color meant to sit on a dark ground) — now that the background itself is cream, the text
   // needs the dark-on-light pairing instead, or it'd be nearly invisible.
