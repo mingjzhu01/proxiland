@@ -294,10 +294,10 @@ export default function Nearby() {
             below, not a glyph up here — the old top-right QR button was the thing nobody found,
             which is what this redesign set out to fix. */}
         <View style={styles.topRow}>
+          {/* Fixed title, per the design — the count already shows in the section labels below,
+              and a changing headline truncated against the pill ("3 people near…"). */}
           <Text style={styles.headline} numberOfLines={1}>
-            {peopleNearby > 0
-              ? `${peopleNearby} ${peopleNearby === 1 ? 'person' : 'people'} nearby`
-              : "Who's nearby"}
+            Who's nearby
           </Text>
           {isDemo ? (
             <View style={styles.demoPill}>
