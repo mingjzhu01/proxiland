@@ -25,8 +25,8 @@ import { colors, fonts } from '../lib/theme';
 
 // The native launch screen (see app.json's expo-splash-screen config) is just a static image —
 // it can't show the "Proxiland" wordmark without baking a new image into a native rebuild. So
-// instead: hide the native splash the instant JS takes over (same #544236 ground + same
-// reverse mark, so the swap is invisible), and show this JS-rendered screen — ripple texture,
+// instead: hide the native splash the instant JS takes over (same #F8F4ED ground + same
+// default-tone mark, so the swap is invisible), and show this JS-rendered screen — ripple texture,
 // live-vector mark, wordmark, tagline, each animating in — in its place for a fixed 2.5s hold.
 // The native launch image carries no ripple on purpose: the OS crops/rescales it
 // unpredictably across devices, which aliases the rings.
@@ -72,12 +72,13 @@ const MARK_PATH_STEM =
 const MARK_PATH_COUNTER =
   'M106.6 108H243.9a36 36 0 0 1 0 72H175.9V288H142.6a36 36 0 0 1-36-36Z';
 
-function ProxilandMarkReverse({ width }: { width: number }) {
+// Default tone: dark paths, cream counter — the tone for cream grounds.
+function ProxilandMark({ width }: { width: number }) {
   return (
     <Svg viewBox="0 0 391 396" width={width} height={width * MARK_ASPECT}>
-      <Path d={MARK_PATH_BOWL} fill={colors.brandMarkCream} />
-      <Path d={MARK_PATH_STEM} fill={colors.brandMarkCream} />
-      <Path d={MARK_PATH_COUNTER} fill={colors.brandMarkDark} />
+      <Path d={MARK_PATH_BOWL} fill={colors.brandMarkDark} />
+      <Path d={MARK_PATH_STEM} fill={colors.brandMarkDark} />
+      <Path d={MARK_PATH_COUNTER} fill={colors.brandMarkCream} />
     </Svg>
   );
 }
@@ -169,9 +170,9 @@ function BrandedSplash({ fontsLoaded }: { fontsLoaded: boolean }) {
 
   return (
     <View style={styles.splash}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <Animated.Image
-        source={require('../assets/proxiland-splash-texture-dark.png')}
+        source={require('../assets/proxiland-splash-texture.png')}
         style={{
           position: 'absolute',
           width: textureSize,
@@ -191,7 +192,7 @@ function BrandedSplash({ fontsLoaded }: { fontsLoaded: boolean }) {
           transform: [{ scale: mark.interpolate({ inputRange: [0, 1], outputRange: [0.955, 1] }) }],
         }}
       >
-        <ProxilandMarkReverse width={markWidth} />
+        <ProxilandMark width={markWidth} />
       </Animated.View>
       {fontsLoaded ? (
         <View style={[styles.splashType, { top: height * WORDMARK_TOP_Y }]}>
@@ -323,7 +324,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        {/* Rendered before the tree so it mounts first: the splash's own light-style StatusBar
+        {/* Rendered before the tree so it mounts first: the splash's own StatusBar
             mounts after it and wins while the splash is up, and this default takes back over
             when the splash unmounts. */}
         <StatusBar style="auto" />
@@ -346,7 +347,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: colors.brandMarkDark,
+    backgroundColor: colors.brandMarkCream,
     overflow: 'hidden',
   },
   // Type block: top edge at 58% of the viewport, centred; sits clear of the innermost rings.
@@ -357,14 +358,14 @@ const styles = StyleSheet.create({
     fontSize: 42,
     lineHeight: 45,
     letterSpacing: 42 * 0.005,
-    color: colors.brandMarkCream,
+    color: colors.brandMarkDark,
   },
   splashTagline: {
     fontFamily: fonts.sans,
     fontSize: 17,
     lineHeight: 17 * 1.45,
     letterSpacing: 17 * 0.035,
-    color: colors.brandTaupe,
+    color: colors.brandInk,
     marginTop: 18,
   },
 });

@@ -5,7 +5,7 @@
     "version": "1.3.0",
     "scheme": "proxiland",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/proxiland-icon-a-light.png",
     "userInterfaceStyle": "light",
     "experiments": {
       "typedRoutes": true
@@ -41,8 +41,8 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/icon.png",
-          "color": "#3b5bdb"
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#544236"
         }
       ],
       [
@@ -51,7 +51,7 @@
           "image": "./assets/splash-mark.png",
           "imageWidth": 288,
           "resizeMode": "contain",
-          "backgroundColor": "#544236"
+          "backgroundColor": "#F8F4ED"
         }
       ],
       [

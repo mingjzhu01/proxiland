@@ -43,9 +43,10 @@ export const colors = {
   // pack's exact values.
   brandMarkDark: '#544236',
   brandMarkCream: '#F8F4ED',
-  // Splash tagline only (the splash brief's "brand-taupe").
-  brandTaupe: '#D8CCBE',
-  brandRingSand: '#D8CFC2',
+  // Splash tagline only (the brand brief's "brand-ink").
+  brandInk: '#6E5C4C',
+  // Ripple ring colours are baked into the texture PNGs; these are reference values, never type.
+  brandRingSand: '#D2C8BA',
   brandRingBark: '#7E6958',
 } as const;
 
