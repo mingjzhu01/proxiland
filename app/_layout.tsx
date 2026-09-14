@@ -53,9 +53,15 @@ function BrandedSplash() {
         style={styles.splashField}
         resizeMode="cover"
       />
-      <Image source={require('../assets/splash-mark.png')} style={styles.splashMark} resizeMode="contain" />
-      <Text style={styles.splashWordmark}>Proxiland</Text>
-      <Text style={styles.splashTagline}>Bringing people around you closer</Text>
+      {/* Pinned so the mark's own vertical center lands on the screen's true center — matching
+          where the ripple field's void sits (resizeMode="cover" centers that image too) — rather
+          than the mark+wordmark+tagline block being centered as a group, which pushed the mark
+          above that point. */}
+      <View style={styles.splashContent}>
+        <Image source={require('../assets/splash-mark.png')} style={styles.splashMark} resizeMode="contain" />
+        <Text style={styles.splashWordmark}>Proxiland</Text>
+        <Text style={styles.splashTagline}>Bringing people around you closer</Text>
+      </View>
     </View>
   );
 }
@@ -190,22 +196,33 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: colors.brandMarkCream,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   // Full-bleed ripple texture behind the mark — no mark baked into this image (that's a
   // separate layer below) so the wordmark stays real, positioned text rather than part of a
   // raster. Ripple rings are only used on surfaces this large; see splashMark below.
   splashField: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  // Pinned by its top edge to the screen's vertical center, then shifted up by half the mark's
+  // own height (translateY) — not centered as a mark+wordmark+tagline block — so the mark's
+  // center (not the block's center) lines up with the ripple field's void, which resizeMode
+  // "cover" also centers on screen. The wordmark/tagline flow below the mark inside this same
+  // block without disturbing that.
+  splashContent: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    transform: [{ translateY: -80 }],
+  },
   // Same plain-mark asset as the native launch screen (app.json's expo-splash-screen `image`),
-  // same size/position, so the handoff from native to this JS splash doesn't jump — only the
-  // ripple field behind it fades in as new. Native launch screens never carry ripple rings
-  // themselves (the OS crops/rescales them unpredictably across devices, which aliases the
-  // rings into moiré) — that's also why the app icon uses the plain mark only, no rings.
-  splashMark: { width: 160, height: 160, marginBottom: 16 },
+  // same size, so the handoff from native to this JS splash doesn't jump — only the ripple field
+  // behind it fades in as new. Native launch screens never carry ripple rings themselves (the OS
+  // crops/rescales them unpredictably across devices, which aliases the rings into moiré) —
+  // that's also why the app icon uses the plain mark only, no rings.
+  splashMark: { width: 160, height: 160, marginBottom: 8 },
   // Both were tuned for the old dark-brown splash background (inkOn = the light/cream text
   // color meant to sit on a dark ground) — now that the background itself is cream, the text
   // needs the dark-on-light pairing instead, or it'd be nearly invisible.
   splashWordmark: { ...typeStyles.wordmark, color: colors.ink },
-  splashTagline: { ...typeStyles.tagline, fontSize: 16, marginTop: 6, textTransform: 'none', color: colors.textSecondary },
+  splashTagline: { ...typeStyles.tagline, fontSize: 18, marginTop: 6, textTransform: 'none', color: colors.brandMarkDark },
 });
