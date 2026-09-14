@@ -50,7 +50,7 @@ SplashScreen.hideAsync().catch(() => {});
 // bootstrap finishes early the full hold is still honoured; if it runs long the splash stays
 // up rather than showing a half-built screen.
 const APP_START_TIME = Date.now();
-const MIN_SPLASH_MS = 2500;
+const MIN_SPLASH_MS = 3500;
 
 // Splash geometry, from the brief's 390x844 reference frame. The texture is a fixed square
 // positioned from the mark's centre — never cover-fitted — so the mark sits in the void baked
@@ -62,7 +62,7 @@ const REF_TEXTURE_SIZE = 1200;
 const LARGE_MARK_WIDTH = 192;
 const LARGE_TEXTURE_SIZE = 1600;
 const MARK_CENTRE_Y = 0.38;
-const WORDMARK_TOP_Y = 0.58;
+const WORDMARK_TOP_Y = 0.53;
 const SPLASH_EASE = Easing.bezier(0.2, 0.8, 0.2, 1);
 
 const MARK_PATH_BOWL =
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brandMarkCream,
     overflow: 'hidden',
   },
-  // Type block: top edge at 58% of the viewport, centred; sits clear of the innermost rings.
+  // Type block: top edge at 53% of the viewport, centred; sits clear of the innermost rings.
   splashType: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   // Yeseva One has exactly one weight — never set fontWeight here.
   splashWordmark: {
@@ -362,9 +362,9 @@ const styles = StyleSheet.create({
   },
   splashTagline: {
     fontFamily: fonts.sans,
-    fontSize: 17,
-    lineHeight: 17 * 1.45,
-    letterSpacing: 17 * 0.035,
+    fontSize: 20,
+    lineHeight: 20 * 1.4,
+    letterSpacing: 20 * 0.03,
     color: colors.brandInk,
     marginTop: 18,
   },
