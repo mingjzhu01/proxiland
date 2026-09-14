@@ -131,6 +131,19 @@ export default function TabsLayout() {
             onPress={() => setCreateMenuOpen(false)}
           />
           <View style={[styles.createTileWrap, { bottom: tabBarHeight + 10 }]}>
+            {/* Join lives here too (nearby_3a): once the user is in an event, Nearby no longer
+                shows the "At an event?" card, so this is the way to join another. Routes to
+                the existing scanner, which links on to code entry. */}
+            <Pressable
+              style={styles.createTile}
+              onPress={() => {
+                setCreateMenuOpen(false);
+                router.push('/scan-event');
+              }}
+            >
+              <Ionicons name="qr-code-outline" size={20} color={colors.brandMarkCream} />
+              <Text style={styles.createTileLabel}>Join an event</Text>
+            </Pressable>
             <Pressable
               style={styles.createTile}
               onPress={() => {
@@ -161,7 +174,7 @@ const styles = StyleSheet.create({
   },
   createCirclePressed: { transform: [{ scale: 0.92 }] },
   scrim: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: colors.scrim },
-  createTileWrap: { position: 'absolute', left: 96, right: 96 },
+  createTileWrap: { position: 'absolute', left: 96, right: 96, gap: 8 },
   createTile: {
     backgroundColor: colors.brandMarkDark,
     borderRadius: 16,

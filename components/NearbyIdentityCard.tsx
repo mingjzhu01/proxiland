@@ -1,10 +1,7 @@
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { Card } from './Card';
 import { LetteredAvatar } from './LetteredAvatar';
-import { WhyYouTwo } from './WhyYouTwo';
-import { PrimaryButton, ResolvedButton } from './Buttons';
 import { formatEducation } from '../lib/formatEducation';
-import { colors, avatarSizes, typeStyles, fonts } from '../lib/theme';
+import { colors, fonts } from '../lib/theme';
 
 type Props = {
   name: string;
@@ -16,16 +13,16 @@ type Props = {
   gradSchool?: string | null;
   gradYear?: string | null;
   photoUrl?: string | null;
-  reason?: string | null;
   status: 'none' | 'requested' | 'connected';
   onPress: () => void;
   onPhotoPress?: () => void;
   onConnect: () => void;
 };
 
-// The Nearby feed's full-identity card (identity_visibility === 'full') — a richer treatment
-// than the compact ProfileCard row, since it carries the "why you two" rationale and its own
-// primary action, same shape as an event match card.
+// The Nearby feed's full-identity card, per the nearby_3a handoff: a single compact row —
+// avatar, name / role / school, one outline action — so the people list reads as a calm list
+// rather than a stack of panels. Action labels keep the screen's existing logic; only the
+// treatment changed.
 export function NearbyIdentityCard({
   name,
   headline,
@@ -36,13 +33,12 @@ export function NearbyIdentityCard({
   gradSchool,
   gradYear,
   photoUrl,
-  reason,
   status,
   onPress,
   onPhotoPress,
   onConnect,
 }: Props) {
-  const subtitle = [title, employer].map((s) => s?.trim()).filter(Boolean).join(' at ');
+  const role = [title, employer].map((s) => s?.trim()).filter(Boolean).join(' at ') || headline;
   const education = formatEducation({
     undergrad_school: undergradSchool ?? null,
     undergrad_year: undergradYear ?? null,
@@ -51,41 +47,71 @@ export function NearbyIdentityCard({
   });
 
   return (
-    <Card style={styles.card}>
-      <View style={styles.headRow}>
-        <Pressable onPress={onPhotoPress ?? onPress}>
-          <LetteredAvatar name={name} photoUrl={photoUrl} size={avatarSizes.matchCard} />
-        </Pressable>
-        <Pressable style={styles.info} onPress={onPress}>
-          <Text style={typeStyles.cardName}>{name}</Text>
-          {subtitle ? <Text style={typeStyles.cardSubtitle}>{subtitle}</Text> : null}
-          {headline ? <Text style={typeStyles.cardTertiary}>{headline}</Text> : null}
-          {education ? <Text style={typeStyles.cardTertiary}>{education}</Text> : null}
-        </Pressable>
-      </View>
+    <View style={styles.card}>
+      <Pressable onPress={onPhotoPress ?? onPress}>
+        <LetteredAvatar name={name} photoUrl={photoUrl} size={48} />
+      </Pressable>
+      <Pressable style={styles.info} onPress={onPress}>
+        <Text style={styles.name} numberOfLines={1}>
+          {name}
+        </Text>
+        {role ? (
+          <Text style={styles.role} numberOfLines={1}>
+            {role}
+          </Text>
+        ) : null}
+        {education ? <Text style={styles.school}>{education}</Text> : null}
+      </Pressable>
+      {status === 'connected' ? (
+        <ActionPill label="Message" onPress={onPress} />
+      ) : status === 'requested' ? (
+        <ActionPill label="Requested" disabled />
+      ) : (
+        <ActionPill label="Connect" onPress={onConnect} />
+      )}
+    </View>
+  );
+}
 
-      {reason ? <WhyYouTwo reason={reason} /> : null}
-
-      <View style={styles.actionRow}>
-        {status === 'connected' ? (
-          <>
-            <Text style={styles.connectedHint}>You're connected — tap to message</Text>
-            <PrimaryButton label="Message" onPress={onPress} />
-          </>
-        ) : status === 'requested' ? (
-          <ResolvedButton label="Requested" />
-        ) : (
-          <PrimaryButton label="Connect" onPress={onConnect} />
-        )}
-      </View>
-    </Card>
+function ActionPill({ label, onPress, disabled }: { label: string; onPress?: () => void; disabled?: boolean }) {
+  return (
+    <Pressable
+      style={[styles.pill, disabled && styles.pillDisabled]}
+      onPress={onPress}
+      disabled={disabled}
+      hitSlop={6}
+    >
+      <Text style={[styles.pillText, disabled && styles.pillTextDisabled]}>{label}</Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { marginHorizontal: 20, marginVertical: 6 },
-  headRow: { flexDirection: 'row', gap: 12 },
-  info: { flex: 1, gap: 2 },
-  actionRow: { marginTop: 14 },
-  connectedHint: { fontFamily: fonts.sans, fontSize: 11, color: colors.textMuted, marginBottom: 8 },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    borderRadius: 18,
+    paddingVertical: 13,
+    paddingHorizontal: 14,
+  },
+  info: { flex: 1, minWidth: 0 },
+  name: { fontFamily: fonts.sansSemibold, fontSize: 16.5, lineHeight: 20, color: colors.brandMarkDark },
+  role: { fontFamily: fonts.sans, fontSize: 13.5, lineHeight: 18, color: colors.brandInk, marginTop: 3 },
+  school: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 17.5, color: colors.brandInk },
+  pill: {
+    borderWidth: 1.5,
+    borderColor: colors.brandMarkDark,
+    borderRadius: 999,
+    paddingVertical: 11,
+    paddingHorizontal: 15,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  pillDisabled: { borderColor: colors.brandSand },
+  pillText: { fontFamily: fonts.sansSemibold, fontSize: 13.5, color: colors.brandMarkDark },
+  pillTextDisabled: { color: colors.brandInk },
 });

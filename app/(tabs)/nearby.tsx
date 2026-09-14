@@ -7,6 +7,8 @@ import { View, FlatList, Text, Pressable, StyleSheet, RefreshControl, Alert } fr
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { EventStrip } from '../../components/EventStrip';
 import { AnonCard } from '../../components/AnonCard';
 import { NearbyIdentityCard } from '../../components/NearbyIdentityCard';
 import { Card } from '../../components/Card';
@@ -19,7 +21,7 @@ import { getMyActiveVisibility } from '../../lib/api/visibility';
 import { getMyConnections } from '../../lib/api/connections';
 import { getCurrentCoords } from '../../lib/location';
 import { getDismissedEventArrivalIds, dismissEventArrival } from '../../lib/eventArrivalDismiss';
-import { colors, avatarSizes, typeStyles, spacing, radii, fonts } from '../../lib/theme';
+import { colors, avatarSizes, typeStyles, radii, fonts } from '../../lib/theme';
 import {
   getOrCreateGeoScope,
   getAggregateView,
@@ -46,15 +48,8 @@ import { sendRequest, getOutgoingPendingConnectTargetIds } from '../../lib/api/r
 import { useAuth } from '../../lib/auth';
 import type { Connection } from '../../lib/types';
 
-function timeRemainingShort(expiresAt: string): string {
-  const ms = new Date(expiresAt).getTime() - Date.now();
-  if (ms <= 0) return '0m';
-  const minutes = Math.round(ms / 60000);
-  if (minutes < 60) return `${minutes}m`;
-  return `${Math.round(minutes / 60)}h`;
-}
-
 type ListItem =
+  | { kind: 'peopleHeader'; key: string; count: number }
   | { kind: 'header'; key: string; label: string; count: number }
   | { kind: 'connected'; key: string; connection: Connection }
   | { kind: 'incomingReveal'; key: string; reveal: IncomingRevealRequest }
@@ -64,6 +59,7 @@ type ListItem =
 export default function Nearby() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
   const { hasProfile, isDemo } = useAuth();
   const [visibilityExpiresAt, setVisibilityExpiresAt] = useState<string | null>(null);
   const [visibilitySheetOpen, setVisibilitySheetOpen] = useState(false);
@@ -276,7 +272,7 @@ export default function Nearby() {
       .map((r) => ({ kind: 'incomingReveal' as const, key: `r-${r.id}`, reveal: r })),
     ...identityCards.map((c) => ({ kind: 'identity' as const, key: `i-${c.user_id}`, card: c })),
   ];
-  const listData: ListItem[] = [
+  const people: ListItem[] = [
     ...(anonCards.length > 0
       ? [{ kind: 'header' as const, key: 'h-anon', label: 'Anonymous', count: anonCards.length }]
       : []),
@@ -286,16 +282,22 @@ export default function Nearby() {
       : []),
     ...identityGroup,
   ];
+  const peopleCount = anonCards.length + identityGroup.length;
+  // The "PEOPLE NEARBY" row is a list item (not ListHeaderComponent) so it can be the sticky
+  // index while the event strip above it scrolls away. Omitted when there's no one, so the
+  // empty state can render instead.
+  const listData: ListItem[] =
+    peopleCount > 0 ? [{ kind: 'peopleHeader', key: 'people-header', count: peopleCount }, ...people] : [];
+  const inAnyEvent = myActiveEvents.length > 0;
 
   return (
     <View style={styles.container}>
+      {/* Only the title row stays fixed; everything else — event strip, join card, banners,
+          people — lives in the one FlatList below so the whole screen scrolls as one gesture.
+          Previously the events sat in a non-scrolling block above a scrolling list, which is
+          what made the screen feel stuck once a few events were joined. */}
       <View style={[styles.header, { paddingTop: insets.top + 26 }]}>
-        {/* Title and the Go visible pill share a baseline row; the join affordance is the card
-            below, not a glyph up here — the old top-right QR button was the thing nobody found,
-            which is what this redesign set out to fix. */}
         <View style={styles.topRow}>
-          {/* Fixed title, per the design — the count already shows in the section labels below,
-              and a changing headline truncated against the pill ("3 people near…"). */}
           <Text style={styles.headline} numberOfLines={1}>
             Who's nearby
           </Text>
@@ -304,64 +306,72 @@ export default function Nearby() {
               <Text style={styles.demoPillText}>Demo mode</Text>
             </View>
           ) : null}
-          <Pressable style={styles.visibilityPill} onPress={() => setVisibilitySheetOpen(true)}>
-            {isVisible ? <View style={styles.liveDot} /> : null}
-            <Text style={styles.visibilityPillText}>
-              {isVisible ? `Visible · ${timeRemainingShort(visibilityExpiresAt!)}` : 'Go visible'}
-            </Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.entryCardWrap}>
-          <EventEntryCard mode={entryMode} onModeChange={setEntryMode} onJoined={load} />
-        </View>
-        <View style={styles.entryDivider} />
-
-        {myActiveEvents.map((e) => (
-          <Pressable key={e.id} style={styles.eventBanner} onPress={() => router.push(`/event/${e.id}`)}>
-            <Ionicons name="people" size={17} color={colors.brassOnDark} />
-            <View style={styles.eventBannerText}>
-              <Text style={styles.eventBannerTitle}>{e.name}</Text>
-              <Text style={styles.eventBannerSubtitle}>You're in</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color="rgba(245,239,230,.6)" />
-          </Pressable>
-        ))}
-
-        {joinableNearbyEvents.map((e) => (
           <Pressable
-            key={e.id}
-            style={styles.eventBanner}
-            onPress={() => handleJoinEvent(e)}
-            disabled={isJoiningEventId === e.id}
+            style={[styles.visibilityPill, isVisible && styles.visibilityPillOn]}
+            onPress={() => setVisibilitySheetOpen(true)}
           >
-            <Ionicons name="people" size={17} color={colors.brassOnDark} />
-            <View style={styles.eventBannerText}>
-              <Text style={styles.eventBannerTitle}>You're at {e.name}</Text>
-              <Text style={styles.eventBannerSubtitle}>
-                {isJoiningEventId === e.id ? 'Joining…' : 'Tap to join and see who else is here'}
-              </Text>
-            </View>
-          </Pressable>
-        ))}
-
-        {profileIncomplete ? (
-          <Pressable style={styles.incompleteBanner} onPress={() => router.push('/edit-profile')}>
-            <Text style={styles.incompleteBannerText}>
-              You're browsing without a profile — finish yours to expand cards and connect.
+            <Text style={[styles.visibilityPillText, isVisible && styles.visibilityPillTextOn]}>
+              {isVisible ? 'Visible' : 'Go visible'}
             </Text>
           </Pressable>
-        ) : null}
+        </View>
       </View>
 
       <FlatList
         data={listData}
         keyExtractor={(item) => item.key}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={load} />}
+        contentContainerStyle={[styles.listContent, { paddingBottom: tabBarHeight + 16 }]}
+        // Index 0 is ListHeaderComponent; 1 is the first data item, the "PEOPLE NEARBY" row.
+        stickyHeaderIndices={[1]}
+        ItemSeparatorComponent={ListGap}
+        ListHeaderComponent={
+          <View>
+            {inAnyEvent ? (
+              <View style={styles.stripWrap}>
+                <EventStrip events={myActiveEvents} onPressEvent={(id) => router.push(`/event/${id}`)} />
+              </View>
+            ) : (
+              // Zero events: the join card is the primary affordance, exactly as before. Once
+              // the user is in any event it's gone — joining another is under the + menu.
+              <>
+                <View style={styles.entryCardWrap}>
+                  <EventEntryCard mode={entryMode} onModeChange={setEntryMode} onJoined={load} />
+                </View>
+                <View style={styles.entryDivider} />
+              </>
+            )}
+
+            {joinableNearbyEvents.map((e) => (
+              <Pressable
+                key={e.id}
+                style={styles.arrivalPrompt}
+                onPress={() => handleJoinEvent(e)}
+                disabled={isJoiningEventId === e.id}
+              >
+                <Ionicons name="people" size={17} color={colors.brandMarkCream} />
+                <View style={styles.arrivalPromptText}>
+                  <Text style={styles.arrivalPromptTitle}>You're at {e.name}</Text>
+                  <Text style={styles.arrivalPromptSubtitle}>
+                    {isJoiningEventId === e.id ? 'Joining…' : 'Tap to join and see who else is here'}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
+
+            {profileIncomplete ? (
+              <Pressable style={styles.incompleteBanner} onPress={() => router.push('/edit-profile')}>
+                <Text style={styles.incompleteBannerText}>
+                  You're browsing without a profile — finish yours to expand cards and connect.
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
+        }
         ListEmptyComponent={
           // Hidden while the card above is scanning or taking a code — the camera pane is tall,
           // and a second block of copy under it just pushes the whole thing off screen.
-          isLoading || entryMode !== 'prompt' ? null : (
+          isLoading || (!inAnyEvent && entryMode !== 'prompt') ? null : (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateTitle}>
                 {isVisible ? 'No one nearby right now' : "Go visible to see who's around you"}
@@ -375,11 +385,20 @@ export default function Nearby() {
           )
         }
         renderItem={({ item }) => {
+          if (item.kind === 'peopleHeader') {
+            return (
+              <View style={styles.peopleHeader}>
+                <Text style={styles.eyebrow}>People nearby</Text>
+                <Text style={styles.eyebrow}>{item.count}</Text>
+              </View>
+            );
+          }
+
           if (item.kind === 'header') {
             return (
-              <SectionLabel tone={item.label === 'Anonymous' ? 'muted' : 'brass'} style={styles.sectionHeader}>
+              <Text style={[styles.eyebrow, styles.subHeader]}>
                 {item.label} · {item.count}
-              </SectionLabel>
+              </Text>
             );
           }
 
@@ -440,7 +459,6 @@ export default function Nearby() {
                 gradSchool={c.grad_school}
                 gradYear={c.grad_year}
                 photoUrl={c.photo_url}
-                reason={c.overlap_phrase}
                 status={requested ? 'requested' : 'none'}
                 onPress={() => router.push(`/profile/${c.user_id}`)}
                 onConnect={() => handleConnect(c.user_id)}
@@ -466,6 +484,10 @@ export default function Nearby() {
   );
 }
 
+function ListGap() {
+  return <View style={styles.listGap} />;
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.brandMarkCream },
   header: {
@@ -477,9 +499,6 @@ const styles = StyleSheet.create({
   demoPill: { backgroundColor: colors.brass, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
   demoPillText: { fontFamily: fonts.sansSemibold, color: colors.inkOn, fontSize: 11 },
   visibilityPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.brandSand,
@@ -487,8 +506,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 9,
   },
-  liveDot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: colors.live },
-  visibilityPillText: { fontFamily: fonts.sans, fontSize: 15, color: colors.brandMarkDark },
+  visibilityPillOn: { backgroundColor: colors.brandMarkDark, borderColor: colors.brandMarkDark },
+  visibilityPillText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.brandMarkDark },
+  visibilityPillTextOn: { color: colors.brandMarkCream },
   headline: {
     flexShrink: 1,
     fontFamily: fonts.wordmark,
@@ -496,6 +516,11 @@ const styles = StyleSheet.create({
     lineHeight: 35,
     color: colors.brandMarkDark,
   },
+  listContent: { paddingHorizontal: 18 },
+  listGap: { height: 10 },
+  // The strip scrolls edge to edge, so it breaks out of the list's gutter; its own content row
+  // re-applies the gutter so the first chip lines up and the last can scroll to the edge.
+  stripWrap: { marginHorizontal: -18, paddingTop: 14 },
   // The card is wider than the text gutter by 7px each side so its edges bracket the title and
   // pill above it; the divider below spans that same widened width.
   entryCardWrap: { marginTop: 16 },
@@ -505,6 +530,24 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginHorizontal: -7,
   },
+  // Sticky, so it needs an opaque ground for the cards to scroll under.
+  peopleHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    backgroundColor: colors.brandMarkCream,
+    paddingTop: 14,
+    paddingHorizontal: 2,
+    paddingBottom: 2,
+  },
+  eyebrow: {
+    fontFamily: fonts.sansSemibold,
+    fontSize: 11,
+    letterSpacing: 11 * 0.14,
+    textTransform: 'uppercase',
+    color: colors.brandInk,
+  },
+  subHeader: { paddingHorizontal: 2, paddingTop: 12 },
   emptyState: { maxWidth: 330, alignSelf: 'center', paddingTop: 26, paddingHorizontal: 10 },
   emptyStateTitle: {
     fontFamily: fonts.sansSemibold,
@@ -521,29 +564,35 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 7,
   },
-  eventBanner: {
+  // The geofence "you're at X" prompt (a nearby event the user hasn't joined). Not part of the
+  // strip — that's joined events only — so it keeps a banner shape, on the brand palette.
+  arrivalPrompt: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: colors.brand,
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 12,
+    backgroundColor: colors.brandMarkDark,
+    borderRadius: 16,
+    padding: 13,
+    marginTop: 14,
   },
-  eventBannerText: { flex: 1 },
-  eventBannerTitle: { fontFamily: fonts.sansSemibold, fontSize: 13.5, color: colors.inkOn },
-  eventBannerSubtitle: { fontFamily: fonts.sans, fontSize: 11.5, color: 'rgba(245,239,230,.6)', marginTop: 1 },
+  arrivalPromptText: { flex: 1 },
+  arrivalPromptTitle: { fontFamily: fonts.sansSemibold, fontSize: 14.5, color: colors.brandMarkCream },
+  arrivalPromptSubtitle: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.brandSand, marginTop: 2 },
   incompleteBanner: {
-    backgroundColor: colors.surfaceSunken,
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 12,
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 13,
+    marginTop: 14,
     borderWidth: 1,
-    borderColor: colors.rule,
+    borderColor: colors.hairline,
   },
-  incompleteBannerText: { fontFamily: fonts.sans, fontSize: 12, color: colors.brass },
-  sectionHeader: { marginHorizontal: spacing.gutter, marginTop: 22, marginBottom: 10 },
-  wantsCard: { marginHorizontal: spacing.gutter, marginVertical: 6, gap: 12 },
+  incompleteBannerText: { fontFamily: fonts.sans, fontSize: 12.5, lineHeight: 18, color: colors.brandInk },
+  wantsCard: {
+    gap: 12,
+    backgroundColor: colors.card,
+    borderColor: colors.hairline,
+    borderRadius: 18,
+  },
   wantsRow: { flexDirection: 'row', gap: 12 },
   wantsInfo: { flex: 1, gap: 2, justifyContent: 'center' },
   wantsLabel: {},

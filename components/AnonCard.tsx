@@ -87,7 +87,13 @@ export function AnonCard({
 }
 
 const styles = StyleSheet.create({
-  card: { marginHorizontal: 20, marginVertical: 6 },
+  // Shell matches the nearby_3a person card so the list reads as one; the card's own content
+  // and actions are unchanged. Gutter and vertical rhythm come from the list, not the card.
+  card: {
+    backgroundColor: colors.card,
+    borderColor: colors.hairline,
+    borderRadius: 18,
+  },
   cardAsked: { opacity: 0.72 },
   identityRow: { flexDirection: 'row', alignItems: 'flex-start', padding: 16, paddingBottom: 0 },
   flagButton: { marginLeft: 'auto', padding: 4 },
