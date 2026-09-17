@@ -24,7 +24,7 @@ import { formatEducation } from '../../lib/formatEducation';
 import { ReportSheet } from '../../components/ReportSheet';
 import { LetteredAvatar } from '../../components/LetteredAvatar';
 import { WhyYouTwo } from '../../components/WhyYouTwo';
-import { SecondaryButton } from '../../components/Buttons';
+import { PrimaryButton, SecondaryButton } from '../../components/Buttons';
 import { RelationshipPill } from '../../components/RelationshipPill';
 import { useRelationships, resolveConnectionId } from '../../lib/relationships';
 import { useToast } from '../../lib/toast';
