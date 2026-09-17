@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Alert } from 'react-native';
 import { Link } from 'expo-router';
-import { supabase } from '../../lib/supabase';
+import { supabase, EMAIL_CONFIRM_REDIRECT_URL } from '../../lib/supabase';
 import { fonts } from '../../lib/theme';
 
 export default function SignUp() {
@@ -20,7 +20,7 @@ export default function SignUp() {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName.trim() } },
+      options: { data: { full_name: fullName.trim() }, emailRedirectTo: EMAIL_CONFIRM_REDIRECT_URL },
     });
     setIsSubmitting(false);
 

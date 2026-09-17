@@ -7,7 +7,7 @@ import { View, Text, Pressable, Switch, StyleSheet, ScrollView, Alert } from 're
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { supabase } from '../../lib/supabase';
+import { supabase, EMAIL_CONFIRM_REDIRECT_URL } from '../../lib/supabase';
 import { getMyProfile } from '../../lib/api/profile';
 import { getMyProfileAttributes, type ProfileAttributes } from '../../lib/api/onboarding';
 import { getMyNearbyIdentityVisibility, setMyNearbyIdentityVisibility } from '../../lib/api/feed';
@@ -71,7 +71,11 @@ export default function MyProfile() {
     if (!userEmail) return;
     setIsResending(true);
     try {
-      const { error } = await supabase.auth.resend({ type: 'signup', email: userEmail });
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: userEmail,
+        options: { emailRedirectTo: EMAIL_CONFIRM_REDIRECT_URL },
+      });
       if (error) throw error;
       Alert.alert('Sent', 'Check your email for a verification link.');
     } catch (error: any) {
