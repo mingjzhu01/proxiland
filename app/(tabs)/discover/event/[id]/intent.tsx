@@ -2,15 +2,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { getMyEventIntent, upsertEventIntent, isIntentComplete } from '../../../lib/api/events';
-import { IntentOptionPicker } from '../../../components/IntentOptionPicker';
-import { Card } from '../../../components/Card';
-import { Chip } from '../../../components/Chip';
-import { PrimaryButton } from '../../../components/Buttons';
-import { ASK_OPTION_BY_ID, OFFER_OPTION_BY_ID } from '../../../lib/eventIntentOptions';
-import { EVENT_INTENT_DEFAULTS } from '../../../lib/eventIntentConfig';
-import { logSessionEvent } from '../../../lib/api/instrumentation';
-import { colors, spacing, fonts } from '../../../lib/theme';
+import { getMyEventIntent, upsertEventIntent, isIntentComplete } from '../../../../../lib/api/events';
+import { IntentOptionPicker } from '../../../../../components/IntentOptionPicker';
+import { Card } from '../../../../../components/Card';
+import { Chip } from '../../../../../components/Chip';
+import { PrimaryButton } from '../../../../../components/Buttons';
+import { ASK_OPTION_BY_ID, OFFER_OPTION_BY_ID } from '../../../../../lib/eventIntentOptions';
+import { EVENT_INTENT_DEFAULTS } from '../../../../../lib/eventIntentConfig';
+import { logSessionEvent } from '../../../../../lib/api/instrumentation';
+import { colors, spacing, fonts } from '../../../../../lib/theme';
 
 export default function EventIntent() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -95,7 +95,7 @@ export default function EventIntent() {
     if (wasCompleteOnLoad) {
       router.back();
     } else {
-      router.replace('/(tabs)/nearby');
+      router.replace('/(tabs)/discover');
     }
   }
 
@@ -129,7 +129,7 @@ export default function EventIntent() {
         logSessionEvent('event_intent_custom_text_added', { scopeId: id });
       }
 
-      router.replace(`/event/${id}`);
+      router.replace(`/discover/event/${id}`);
     } catch (error: any) {
       Alert.alert('Could not save', error.message ?? String(error));
     } finally {

@@ -19,7 +19,9 @@ import { SourceSans3_400Regular, SourceSans3_600SemiBold } from '@expo-google-fo
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from '../lib/auth';
-import { RequestsBadgeProvider } from '../lib/requestsBadge';
+import { RelationshipsProvider } from '../lib/relationships';
+import { ToastProvider } from '../lib/toast';
+import { ActiveEventProvider } from '../lib/eventContext';
 import { MessagesBadgeProvider } from '../lib/messagesBadge';
 import { colors, fonts } from '../lib/theme';
 
@@ -258,7 +260,7 @@ function RootNavigation() {
         // New sign-ups (no profile yet) go straight to completing their profile — matching
         // recommendations and event intent are both meaningfully worse without one, so this
         // is worth the friction of a forced stop rather than the previous soft/no nudge.
-        router.replace(!hasProfile ? '/edit-profile' : (resumePath as any) ?? '/(tabs)/nearby');
+        router.replace(!hasProfile ? '/edit-profile' : (resumePath as any) ?? '/(tabs)/discover');
         setShowBrandedSplash(false);
       } else {
         setShowBrandedSplash(false);
@@ -301,11 +303,6 @@ function RootNavigation() {
         <Stack.Screen name="join-event-code" options={{ headerShown: false }} />
         {/* headerShown: false — the screen renders its own full-bleed brand-colored header
             with a custom back chevron and menu, per the visual redesign. */}
-        <Stack.Screen name="event/[id]/index" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="event/[id]/intent"
-          options={{ headerShown: true, title: 'Your Intent', headerBackTitle: 'Event' }}
-        />
         {/* Organiser tools — reachable only from Settings, itself only shown to is_admin
             accounts. Each screen renders its own header/back control, same pattern as the
             other full-bleed-header screens above — headerShown: false throughout. */}
@@ -331,11 +328,15 @@ export default function RootLayout() {
             when the splash unmounts. */}
         <StatusBar style="auto" />
         <AuthProvider>
-          <RequestsBadgeProvider>
+          <RelationshipsProvider>
             <MessagesBadgeProvider>
-              <RootNavigation />
+              <ActiveEventProvider>
+                <ToastProvider>
+                  <RootNavigation />
+                </ToastProvider>
+              </ActiveEventProvider>
             </MessagesBadgeProvider>
-          </RequestsBadgeProvider>
+          </RelationshipsProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

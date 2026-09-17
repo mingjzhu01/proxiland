@@ -6,5 +6,5 @@ export default function Index() {
 
   if (isLoading) return null;
 
-  return <Redirect href={session ? '/(tabs)/nearby' : '/(auth)/sign-in'} />;
+  return <Redirect href={session ? '/(tabs)/discover' : '/(auth)/sign-in'} />;
 }

@@ -114,6 +114,25 @@ export async function getOutgoingPendingConnectTargetIds(): Promise<Set<string>>
   );
 }
 
+// Accepted connect requests in either direction. connections rows carry no provenance, so this
+// is how a connection is traced back to the event it was made at ("Met at …") and how the
+// event connections sheet knows which connections belong to the event it's open for.
+export async function getAcceptedConnectRequests(): Promise<ConnectionRequest[]> {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return [];
+  const myId = userData.user.id;
+
+  const { data, error } = await supabase
+    .from('connection_requests')
+    .select('*')
+    .eq('type', 'connect')
+    .eq('status', 'accepted')
+    .or(`sender_id.eq.${myId},receiver_id.eq.${myId}`);
+
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function getOutgoingRequests(): Promise<ConnectionRequest[]> {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) return [];

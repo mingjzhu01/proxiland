@@ -11,7 +11,7 @@ type AuthContextValue = {
   hasProfile: boolean | null;
   refreshHasProfile: () => Promise<void>;
   // True only for the flagged App Store review demo account — drives the "Demo mode" pill
-  // (see app/(tabs)/nearby.tsx). Client-derived display only; actual containment is enforced
+  // (see components/discover/NearbyView.tsx). Client-derived display only; actual containment is enforced
   // at the database level (migration 0043), not by this flag.
   isDemo: boolean;
   // True only for an account flagged organizer/admin (migration 0060) — drives whether the

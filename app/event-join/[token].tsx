@@ -59,8 +59,8 @@ export default function EventJoin() {
         event={event}
         onJoin={handleJoin}
         onNotNow={() => router.back()}
-        onBackToNearby={() => router.replace('/(tabs)/nearby')}
-        onSeeWhosHere={() => (event ? router.replace(`/event/${event.id}`) : router.replace('/(tabs)/nearby'))}
+        onBackToNearby={() => router.replace('/(tabs)/discover')}
+        onSeeWhosHere={() => (event ? router.replace(`/discover/event/${event.id}`) : router.replace('/(tabs)/discover'))}
       />
     </View>
   );

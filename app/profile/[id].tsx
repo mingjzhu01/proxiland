@@ -24,7 +24,10 @@ import { formatEducation } from '../../lib/formatEducation';
 import { ReportSheet } from '../../components/ReportSheet';
 import { LetteredAvatar } from '../../components/LetteredAvatar';
 import { WhyYouTwo } from '../../components/WhyYouTwo';
-import { PrimaryButton, SecondaryButton } from '../../components/Buttons';
+import { SecondaryButton } from '../../components/Buttons';
+import { RelationshipPill } from '../../components/RelationshipPill';
+import { useRelationships, resolveConnectionId } from '../../lib/relationships';
+import { useToast } from '../../lib/toast';
 import { colors, avatarSizes, spacing, radii, fonts } from '../../lib/theme';
 import type { Profile } from '../../lib/types';
 
@@ -58,17 +61,40 @@ export default function ProfileDetail() {
     }, [id])
   );
 
+  const rel = useRelationships();
+  const toast = useToast();
+  const relationship = id ? rel.statusFor(id) : { kind: 'none' as const };
+
   async function handleConnect() {
     if (!id) return;
     setIsSending(true);
     try {
-      await sendRequest(id, 'connect');
-      Alert.alert('Sent', 'Connection request sent.');
-    } catch (error: any) {
-      Alert.alert('Could not send request', error.message);
+      await rel.sendConnect(id);
+      toast.show('Request sent');
+    } catch {
+      toast.show("Couldn't send request. Try again.");
     } finally {
       setIsSending(false);
     }
+  }
+
+  async function handleAccept() {
+    if (relationship.kind !== 'incoming') return;
+    setIsSending(true);
+    try {
+      await rel.accept(relationship.request.id);
+      toast.show("You're now connected");
+    } catch (error: any) {
+      Alert.alert("Couldn't accept", error.message ?? String(error));
+    } finally {
+      setIsSending(false);
+    }
+  }
+
+  async function handleMessage() {
+    if (relationship.kind !== 'connected') return;
+    const resolved = connectionId ?? (await resolveConnectionId(relationship.connection));
+    if (resolved) router.push(`/chat/${resolved}`);
   }
 
   async function handleSendCoffee() {
@@ -171,21 +197,24 @@ export default function ProfileDetail() {
           </View>
         ) : null}
 
-        {connectionId ? (
-          <View style={styles.buttonStack}>
-            <PrimaryButton label="Message" onPress={() => router.push(`/chat/${connectionId}`)} />
-            <SecondaryButton
-              label="Ask for coffee"
-              loading={isSending}
-              onPress={() => setCoffeeModalVisible(true)}
+        {/* Same five states as the event tabs and Connections, from the shared store — so a
+            request accepted here shows as Message everywhere else the moment it lands. */}
+        <View style={styles.buttonStack}>
+          <View style={styles.pillRow}>
+            <RelationshipPill
+              status={relationship}
+              busy={isSending}
+              onConnect={handleConnect}
+              onAccept={handleAccept}
+              onMessage={handleMessage}
             />
           </View>
-        ) : (
-          <View style={styles.buttonStack}>
-            <PrimaryButton label="Connect" loading={isSending} onPress={handleConnect} />
+          {relationship.kind === 'connected' ? (
+            <SecondaryButton label="Ask for coffee" loading={isSending} onPress={() => setCoffeeModalVisible(true)} />
+          ) : (
             <Text style={styles.coffeeHint}>Connect first to schedule a coffee chat</Text>
-          </View>
-        )}
+          )}
+        </View>
       </ScrollView>
 
       <Modal visible={coffeeModalVisible} animationType="slide" transparent onRequestClose={() => setCoffeeModalVisible(false)}>
@@ -311,6 +340,7 @@ const styles = StyleSheet.create({
   detailRowDivider: { borderBottomWidth: 1, borderColor: colors.ruleInner },
   detailLabel: { fontFamily: fonts.sansSemibold, fontSize: 10, textTransform: 'uppercase', letterSpacing: 1.4, color: colors.textMuted, marginBottom: 4 },
   detailValue: { fontFamily: fonts.sans, fontSize: 15, color: colors.ink },
+  pillRow: { alignItems: 'flex-start' },
   buttonStack: { width: '100%', gap: 10, marginTop: 24 },
   coffeeHint: { fontFamily: fonts.sans, color: colors.textMuted, fontSize: 12, marginTop: 4, textAlign: 'center' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(36,28,22,.42)', justifyContent: 'flex-end' },

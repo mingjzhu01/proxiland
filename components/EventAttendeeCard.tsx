@@ -1,64 +1,62 @@
+// Attendee row for the event's Top Matches / Overlap / Everyone tabs, per the event-connections
+// handoff §3: avatar, name / role / company, one relationship-state pill. The match rationale
+// ("why you two") stays for ranked tabs — it's the matching logic's output, which the handoff
+// says not to touch — rendered under the row inside the same card.
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { Card } from './Card';
 import { LetteredAvatar } from './LetteredAvatar';
+import { RelationshipPill } from './RelationshipPill';
 import { WhyYouTwo } from './WhyYouTwo';
-import { PrimaryButton, ResolvedButton } from './Buttons';
-import { colors, avatarSizes, typeStyles, fonts } from '../lib/theme';
+import { colors, fonts } from '../lib/theme';
 import type { EventAttendee } from '../lib/api/events';
-
-type ConnectStatus = 'none' | 'requested' | 'connected';
+import type { RelationshipStatus } from '../lib/relationships';
 
 type Props = {
   attendee: EventAttendee;
-  status: ConnectStatus;
+  status: RelationshipStatus;
+  busy?: boolean;
   onPress: () => void;
   onConnect: () => void;
+  onAccept: () => void;
+  onMessage: () => void;
   reason?: string | null;
-  // 1-based rank, shown as a "01"/"02" badge — Top matches tab only.
-  rank?: number;
 };
 
-export function EventAttendeeCard({ attendee, status, onPress, onConnect, reason, rank }: Props) {
-  const subtitle = [attendee.title, attendee.employer].map((s) => s?.trim()).filter(Boolean).join(' at ');
-
+export function EventAttendeeCard({ attendee, status, busy, onPress, onConnect, onAccept, onMessage, reason }: Props) {
   return (
-    <Card style={styles.card}>
-      <Pressable style={styles.headRow} onPress={onPress}>
-        <LetteredAvatar name={attendee.full_name} photoUrl={attendee.photo_url} size={avatarSizes.matchCard} />
-        <View style={styles.info}>
-          <View style={styles.nameRow}>
-            <Text style={typeStyles.cardName}>{attendee.full_name}</Text>
-            {rank !== undefined ? (
-              <View style={styles.rankBadge}>
-                <Text style={styles.rankBadgeText}>{String(rank).padStart(2, '0')}</Text>
-              </View>
-            ) : null}
-          </View>
-          {subtitle ? <Text style={typeStyles.cardSubtitle}>{subtitle}</Text> : null}
-        </View>
-      </Pressable>
-
-      {reason ? <WhyYouTwo reason={reason} dense /> : null}
-
-      <View style={styles.actionRow}>
-        {status === 'connected' ? (
-          <ResolvedButton label="Connected" />
-        ) : status === 'requested' ? (
-          <ResolvedButton label="Requested" />
-        ) : (
-          <PrimaryButton label="Connect" onPress={onConnect} />
-        )}
+    <View style={styles.card}>
+      <View style={styles.row}>
+        <Pressable onPress={onPress}>
+          <LetteredAvatar name={attendee.full_name} photoUrl={attendee.photo_url} size={48} />
+        </Pressable>
+        <Pressable style={styles.text} onPress={onPress}>
+          <Text style={styles.name} numberOfLines={1}>{attendee.full_name}</Text>
+          {attendee.title ? <Text style={styles.role} numberOfLines={1}>{attendee.title}</Text> : null}
+          {attendee.employer ? <Text style={styles.company} numberOfLines={1}>{attendee.employer}</Text> : null}
+        </Pressable>
+        <RelationshipPill status={status} busy={busy} onConnect={onConnect} onAccept={onAccept} onMessage={onMessage} />
       </View>
-    </Card>
+      {reason ? (
+        <View style={styles.reason}>
+          <WhyYouTwo reason={reason} dense />
+        </View>
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { marginHorizontal: 20, marginVertical: 6 },
-  headRow: { flexDirection: 'row', gap: 12 },
-  info: { flex: 1, gap: 2 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  rankBadge: { backgroundColor: colors.brassChipBg, borderRadius: 999, paddingHorizontal: 7, paddingVertical: 2 },
-  rankBadgeText: { fontFamily: fonts.sansSemibold, fontSize: 10, color: colors.brassChipText },
-  actionRow: { marginTop: 14 },
+  card: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    borderRadius: 18,
+    paddingVertical: 13,
+    paddingHorizontal: 14,
+  },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  text: { flex: 1, minWidth: 0 },
+  name: { fontFamily: fonts.sansSemibold, fontSize: 16.5, lineHeight: 20, color: colors.brandMarkDark },
+  role: { fontFamily: fonts.sans, fontSize: 13.5, lineHeight: 18, color: colors.brandInk, marginTop: 3 },
+  company: { fontFamily: fonts.sans, fontSize: 13, lineHeight: 17.5, color: colors.brandInk },
+  reason: { marginTop: 10 },
 });

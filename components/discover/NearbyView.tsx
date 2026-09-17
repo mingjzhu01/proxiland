@@ -2,21 +2,20 @@
 // People you're already connected to show as their real profile instead of an anon card —
 // there's no anonymity left to protect once you're actually connected, and re-anonymizing
 // someone you already know would just be confusing.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { View, FlatList, Text, Pressable, StyleSheet, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { EventStrip } from '../../components/EventStrip';
-import { AnonCard } from '../../components/AnonCard';
-import { NearbyIdentityCard } from '../../components/NearbyIdentityCard';
-import { Card } from '../../components/Card';
-import { LetteredAvatar } from '../../components/LetteredAvatar';
-import { PrimaryButton } from '../../components/Buttons';
-import { SectionLabel } from '../../components/SectionLabel';
-import { VisibilityToggle } from '../../components/VisibilityToggle';
-import { EventEntryCard, type EventEntryMode } from '../../components/EventEntryCard';
+import { EventStrip } from '../EventStrip';
+import { AnonCard } from '../AnonCard';
+import { NearbyIdentityCard } from '../NearbyIdentityCard';
+import { Card } from '../Card';
+import { LetteredAvatar } from '../LetteredAvatar';
+import { PrimaryButton } from '../Buttons';
+import { SectionLabel } from '../SectionLabel';
+import { VisibilityToggle } from '../VisibilityToggle';
 import { getMyActiveVisibility } from '../../lib/api/visibility';
 import { getMyConnections } from '../../lib/api/connections';
 import { getCurrentCoords } from '../../lib/location';
@@ -56,14 +55,15 @@ type ListItem =
   | { kind: 'identity'; key: string; card: FeedCardV2 }
   | { kind: 'anon'; key: string; card: FeedCardV2 };
 
-export default function Nearby() {
+// Discover's Nearby context. `control` is the Nearby | Events switch, rendered under the title
+// so it stays fixed with the header while the list scrolls.
+export function NearbyView({ control }: { control: ReactNode }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
   const { hasProfile, isDemo } = useAuth();
   const [visibilityExpiresAt, setVisibilityExpiresAt] = useState<string | null>(null);
   const [visibilitySheetOpen, setVisibilitySheetOpen] = useState(false);
-  const [entryMode, setEntryMode] = useState<EventEntryMode>('prompt');
   const [aggregate, setAggregate] = useState<AggregateView | null>(null);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [incomingReveals, setIncomingReveals] = useState<IncomingRevealRequest[]>([]);
@@ -231,7 +231,7 @@ export default function Nearby() {
             setIsJoiningEventId(event.id);
             try {
               await joinEvent(event.id, 'geofence_prompt');
-              router.push(`/event/${event.id}`);
+              router.push(`/discover/event/${event.id}`);
               await load();
             } catch (error: any) {
               Alert.alert('Could not join event', error.message ?? String(error));
@@ -315,6 +315,7 @@ export default function Nearby() {
             </Text>
           </Pressable>
         </View>
+        {control}
       </View>
 
       <FlatList
@@ -329,18 +330,9 @@ export default function Nearby() {
           <View>
             {inAnyEvent ? (
               <View style={styles.stripWrap}>
-                <EventStrip events={myActiveEvents} onPressEvent={(id) => router.push(`/event/${id}`)} />
+                <EventStrip events={myActiveEvents} onPressEvent={(id) => router.push(`/discover/event/${id}`)} />
               </View>
-            ) : (
-              // Zero events: the join card is the primary affordance, exactly as before. Once
-              // the user is in any event it's gone — joining another is under the + menu.
-              <>
-                <View style={styles.entryCardWrap}>
-                  <EventEntryCard mode={entryMode} onModeChange={setEntryMode} onJoined={load} />
-                </View>
-                <View style={styles.entryDivider} />
-              </>
-            )}
+            ) : null}
 
             {joinableNearbyEvents.map((e) => (
               <Pressable
@@ -369,9 +361,7 @@ export default function Nearby() {
           </View>
         }
         ListEmptyComponent={
-          // Hidden while the card above is scanning or taking a code — the camera pane is tall,
-          // and a second block of copy under it just pushes the whole thing off screen.
-          isLoading || (!inAnyEvent && entryMode !== 'prompt') ? null : (
+          isLoading ? null : (
             <View style={styles.emptyState}>
               <Text style={styles.emptyStateTitle}>
                 {isVisible ? 'No one nearby right now' : "Go visible to see who's around you"}
@@ -521,15 +511,6 @@ const styles = StyleSheet.create({
   // The strip scrolls edge to edge, so it breaks out of the list's gutter; its own content row
   // re-applies the gutter so the first chip lines up and the last can scroll to the edge.
   stripWrap: { marginHorizontal: -18, paddingTop: 14 },
-  // The card is wider than the text gutter by 7px each side so its edges bracket the title and
-  // pill above it; the divider below spans that same widened width.
-  entryCardWrap: { marginTop: 16 },
-  entryDivider: {
-    height: 1,
-    backgroundColor: colors.hairline,
-    marginTop: 4,
-    marginHorizontal: -7,
-  },
   // Sticky, so it needs an opaque ground for the cards to scroll under.
   peopleHeader: {
     flexDirection: 'row',

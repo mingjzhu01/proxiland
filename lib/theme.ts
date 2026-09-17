@@ -58,6 +58,10 @@ export const colors = {
   hairline: '#E4DBCC',
   tabBar: '#F2EDE4',
   insetPill: '#E9E1D5',
+  // Chevrons on non-live cards, placeholders, disabled labels (the discover-events handoff's
+  // "muted ink"); and the header meta line on the dark event header.
+  mutedInk: '#A2917F',
+  headerMeta: '#E5DACA',
   scrim: 'rgba(84,66,54,.34)',
 } as const;
 
