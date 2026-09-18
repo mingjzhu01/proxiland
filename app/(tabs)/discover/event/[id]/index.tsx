@@ -4,7 +4,7 @@
 // Lives inside the Discover tab stack so the tab bar stays up — the Connections tab raises this
 // event's sheet while this screen is focused (see lib/eventContext).
 import { useCallback, useMemo, useState } from 'react';
-import { View, Text, ScrollView, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TextInput, Pressable, StyleSheet, Alert, ActivityIndicator, RefreshControl, Modal } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,6 +36,11 @@ import {
 
 type SegmentKey = 'top' | 'overlap' | 'everyone';
 
+// "Above 999 show (999+) rather than shrinking the type."
+function countLabel(n: number): string {
+  return n > 999 ? '999+' : String(n);
+}
+
 function pluralRoleLabel(role: string | null): string {
   if (!role) return 'Other';
   const label = ROLE_CATEGORY_LABELS[role as keyof typeof ROLE_CATEGORY_LABELS] ?? role;
@@ -64,6 +69,7 @@ export default function EventScreen() {
   const [checkedInAt, setCheckedInAt] = useState<string | null>(null);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [leaveSheetOpen, setLeaveSheetOpen] = useState(false);
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
 
   const load = useCallback(
@@ -201,25 +207,18 @@ export default function EventScreen() {
     if (connectionId) router.push(`/chat/${connectionId}`);
   }
 
-  function handleLeave() {
-    Alert.alert('Leave this event?', "You'll stop seeing attendees and they'll stop seeing you.", [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Leave',
-        style: 'destructive',
-        onPress: async () => {
-          setIsLeaving(true);
-          try {
-            await leaveEvent(id);
-            router.back();
-          } catch (error: any) {
-            Alert.alert('Could not leave event', error.message ?? String(error));
-          } finally {
-            setIsLeaving(false);
-          }
-        },
-      },
-    ]);
+  async function confirmLeave() {
+    setIsLeaving(true);
+    try {
+      await leaveEvent(id);
+      setLeaveSheetOpen(false);
+      router.back();
+    } catch (error: any) {
+      setLeaveSheetOpen(false);
+      Alert.alert('Could not leave event', error.message ?? String(error));
+    } finally {
+      setIsLeaving(false);
+    }
   }
 
   const filteredGroupedAttendees = useMemo(() => {
@@ -298,7 +297,7 @@ export default function EventScreen() {
                 <Text style={styles.checkInButtonText}>{isCheckingIn ? 'Checking in…' : "I'm here — check in"}</Text>
               </Pressable>
             </View>
-            <Pressable onPress={handleLeave} disabled={isLeaving} style={styles.footerLink}>
+            <Pressable onPress={() => setLeaveSheetOpen(true)} disabled={isLeaving} style={styles.footerLink}>
               <Text style={styles.footerLinkText}>Leave event</Text>
             </Pressable>
           </View>
@@ -308,15 +307,20 @@ export default function EventScreen() {
               <View style={styles.track}>
                 {(
                   [
-                    ['top', 'Top Matches'],
-                    ['overlap', 'Overlap'],
-                    ['everyone', 'Everyone'],
-                  ] as [SegmentKey, string][]
-                ).map(([key, label]) => {
+                    ['top', 'Top Matches', topMatches.length],
+                    ['overlap', 'Overlap', sharedOverlap.length],
+                    ['everyone', 'Everyone', attendees.length],
+                  ] as [SegmentKey, string, number][]
+                ).map(([key, label, count]) => {
                   const active = segment === key;
                   return (
                     <Pressable key={key} style={[styles.segment, active && styles.segmentActive]} onPress={() => setSegment(key)}>
-                      <Text style={[styles.segmentLabel, active ? styles.segmentLabelActive : styles.segmentLabelInactive]}>{label}</Text>
+                      <Text
+                        style={[styles.segmentLabel, active ? styles.segmentLabelActive : styles.segmentLabelInactive]}
+                        numberOfLines={1}
+                      >
+                        {label} ({countLabel(count)})
+                      </Text>
                     </Pressable>
                   );
                 })}
@@ -324,15 +328,15 @@ export default function EventScreen() {
             </View>
 
             <ScrollView
-              contentContainerStyle={[styles.list, { paddingBottom: tabBarHeight + 22 }]}
+              style={styles.scrollArea}
+              contentContainerStyle={[styles.list, { paddingBottom: 18 }]}
               refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={colors.brandMarkDark} />}
             >
               {segment === 'top' ? (
                 <>
-                  <View style={styles.sectionRow}>
-                    <Text style={styles.eyebrow}>Best matches</Text>
-                    <Text style={styles.eyebrow}>{topMatches.length}</Text>
-                  </View>
+                  {/* The count lives in the tab label now (Top Matches (n)) — this header
+                      doesn't repeat it. */}
+                  <Text style={[styles.eyebrow, styles.singleSectionLabel]}>Best matches</Text>
                   {topMatches.length > 0 && !topMatches[0].isAiGenerated ? (
                     <Text style={styles.explainer}>AI matching is unavailable right now, so this is a simpler ranking.</Text>
                   ) : null}
@@ -342,24 +346,21 @@ export default function EventScreen() {
                       return attendee ? renderCard(attendee, m.match_reason) : null;
                     })
                   ) : (
-                    <Text style={styles.empty}>No strong matches yet — check back as more people join.</Text>
+                    <NoMatchesCard />
                   )}
                 </>
               ) : null}
 
               {segment === 'overlap' ? (
                 <>
-                  <View style={styles.sectionRow}>
-                    <Text style={styles.eyebrow}>Shared background</Text>
-                    <Text style={styles.eyebrow}>{sharedOverlap.length}</Text>
-                  </View>
+                  <Text style={[styles.eyebrow, styles.singleSectionLabel]}>Shared background</Text>
                   {sharedOverlap.length > 0 ? (
                     sharedOverlap.map((m) => {
                       const attendee = attendeeById.get(m.candidate_user_id);
                       return attendee ? renderCard(attendee, m.match_reason) : null;
                     })
                   ) : (
-                    <Text style={styles.empty}>No shared-background matches yet.</Text>
+                    <NoMatchesCard />
                   )}
                 </>
               ) : null}
@@ -391,23 +392,55 @@ export default function EventScreen() {
                   )}
                 </>
               ) : null}
-
-              {/* The old header menu's actions, re-homed as quiet links under the list (Ming's
-                  call, since the handoff removes the menu without placing them). */}
-              <View style={styles.footer}>
-                <Pressable onPress={handleCheckOut} style={styles.footerLink}>
-                  <Text style={styles.footerLinkText}>Check out</Text>
-                </Pressable>
-                <Pressable onPress={handleLeave} disabled={isLeaving} style={styles.footerLink}>
-                  <Text style={styles.footerLinkText}>Leave event</Text>
-                </Pressable>
-              </View>
             </ScrollView>
+
+            {/* Pinned above the tab bar at every list length and on every tab — previously these
+                trailed the scroll content, landing mid-screen when the list was short and out of
+                reach when it was long. */}
+            <View style={[styles.actionFooter, { paddingBottom: 12 + tabBarHeight }]}>
+              <Pressable style={styles.checkOutButton} onPress={handleCheckOut}>
+                <Text style={styles.checkOutButtonText}>Check out</Text>
+              </Pressable>
+              <Pressable onPress={() => setLeaveSheetOpen(true)} disabled={isLeaving} style={styles.leaveLink} hitSlop={4}>
+                <Text style={styles.leaveLinkText}>Leave event</Text>
+              </Pressable>
+            </View>
           </>
         )}
       </View>
+
+      <Modal visible={leaveSheetOpen} transparent animationType="slide" onRequestClose={() => setLeaveSheetOpen(false)}>
+        <Pressable style={styles.sheetScrim} onPress={() => setLeaveSheetOpen(false)} accessibilityLabel="Close" />
+        <View style={[styles.sheetPanel, { paddingBottom: insets.bottom + 18 }]}>
+          <Text style={styles.sheetTitle}>Leave {event.name ?? 'this event'}?</Text>
+          <Text style={styles.sheetBody}>
+            You'll stop appearing here and lose access to the attendee list. Connections you've made stay.
+          </Text>
+          <Pressable style={styles.sheetPrimary} onPress={confirmLeave} disabled={isLeaving}>
+            <Text style={styles.sheetPrimaryText}>{isLeaving ? 'Leaving…' : 'Leave event'}</Text>
+          </Pressable>
+          <Pressable style={styles.sheetSecondary} onPress={() => setLeaveSheetOpen(false)} disabled={isLeaving}>
+            <Text style={styles.sheetSecondaryText}>Stay</Text>
+          </Pressable>
+        </View>
+      </Modal>
+
       <EventFeedbackSheet visible={showFeedback} eventId={id} onClose={() => setShowFeedback(false)} />
     </>
+  );
+}
+
+// Copy is deliberately condition-neutral — true in an empty room and in a full one where
+// nothing overlaps. Never "You're the first one here."
+function NoMatchesCard() {
+  return (
+    <View style={styles.noMatchesCard}>
+      <View style={styles.noMatchesIcon}>
+        <Ionicons name="people" size={25} color={colors.mutedInk} />
+      </View>
+      <Text style={styles.noMatchesTitle}>No matches yet</Text>
+      <Text style={styles.noMatchesCopy}>Matches appear as people join and share what they're looking for.</Text>
+    </View>
   );
 }
 
@@ -432,11 +465,29 @@ const styles = StyleSheet.create({
   segmentLabelActive: { color: colors.brandMarkDark },
   segmentLabelInactive: { color: colors.brandInk },
 
+  scrollArea: { flex: 1 },
   list: { paddingHorizontal: 18, paddingTop: 14, gap: 10 },
+  // Still used by the Everyone tab's per-role-group headers (label + that group's own count —
+  // not a duplicate of the tab total). The single-label headers below (Best matches, Shared
+  // background) don't reuse this — they're one Text, not a row of two.
   sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', paddingHorizontal: 2, paddingTop: 2 },
+  singleSectionLabel: { paddingHorizontal: 2, paddingTop: 2 },
   eyebrow: { fontFamily: fonts.sansSemibold, fontSize: 11, letterSpacing: 11 * 0.14, textTransform: 'uppercase', color: colors.brandInk },
   explainer: { fontFamily: fonts.sans, fontSize: 12.5, lineHeight: 18, color: colors.brandInk, paddingHorizontal: 2 },
   empty: { fontFamily: fonts.sans, fontSize: 14.5, lineHeight: 21, color: colors.brandInk, textAlign: 'center', paddingVertical: 34 },
+  noMatchesCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    borderRadius: 20,
+    paddingVertical: 26,
+    paddingHorizontal: 22,
+    alignItems: 'center',
+    gap: 11,
+  },
+  noMatchesIcon: { width: 50, height: 50, borderRadius: 25, backgroundColor: colors.insetPill, alignItems: 'center', justifyContent: 'center' },
+  noMatchesTitle: { fontFamily: fonts.wordmark, fontSize: 20, lineHeight: 24, color: colors.brandMarkDark },
+  noMatchesCopy: { fontFamily: fonts.sans, fontSize: 14, lineHeight: 20, color: colors.brandInk, textAlign: 'center', maxWidth: 260 },
   group: { gap: 10 },
   searchField: {
     flexDirection: 'row',
@@ -458,7 +509,61 @@ const styles = StyleSheet.create({
   checkInButton: { backgroundColor: colors.brandMarkDark, borderRadius: 999, paddingVertical: 14, paddingHorizontal: 24, width: '100%', alignItems: 'center' },
   checkInButtonText: { fontFamily: fonts.sansSemibold, fontSize: 15, color: colors.brandMarkCream },
 
-  footer: { flexDirection: 'row', justifyContent: 'center', gap: 24, paddingTop: 14 },
+  // Used only by the not-checked-in state's Leave link — the checked-in footer below has its
+  // own pair of styles (Check out is outlined, Leave event stays bare text, deliberately
+  // unequal per the brief: Check out is routine, Leave is rarer and heavier so it stays quiet).
   footerLink: { paddingVertical: 12, paddingHorizontal: 8, alignSelf: 'center' },
   footerLinkText: { fontFamily: fonts.sansSemibold, fontSize: 13.5, color: colors.brandInk },
+
+  actionFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.brandMarkCream,
+    borderTopWidth: 1,
+    borderColor: colors.hairline,
+    paddingHorizontal: 18,
+    paddingTop: 12,
+  },
+  checkOutButton: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: colors.brandMarkDark,
+    borderRadius: 999,
+    paddingVertical: 13,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkOutButtonText: { fontFamily: fonts.sansSemibold, fontSize: 14.5, color: colors.brandMarkDark },
+  leaveLink: { paddingVertical: 13, paddingHorizontal: 4, minHeight: 44, justifyContent: 'center' },
+  leaveLinkText: { fontFamily: fonts.sansSemibold, fontSize: 14.5, color: colors.brandInk },
+
+  sheetScrim: { flex: 1, backgroundColor: 'rgba(84,66,54,.42)' },
+  sheetPanel: {
+    backgroundColor: colors.brandMarkCream,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 22,
+    gap: 14,
+    shadowColor: 'rgba(84,66,54,1)',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: -10 },
+    shadowRadius: 30,
+    elevation: 12,
+  },
+  sheetTitle: { fontFamily: fonts.wordmark, fontSize: 22, lineHeight: 26, color: colors.brandMarkDark },
+  sheetBody: { fontFamily: fonts.sans, fontSize: 14.5, lineHeight: 21, color: colors.brandInk },
+  sheetPrimary: { backgroundColor: colors.brandMarkDark, borderRadius: 999, paddingVertical: 15, alignItems: 'center', minHeight: 44 },
+  sheetPrimaryText: { fontFamily: fonts.sansSemibold, fontSize: 15.5, color: colors.brandMarkCream },
+  sheetSecondary: {
+    borderWidth: 1.5,
+    borderColor: colors.brandMarkDark,
+    borderRadius: 999,
+    paddingVertical: 14,
+    alignItems: 'center',
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  sheetSecondaryText: { fontFamily: fonts.sansSemibold, fontSize: 15.5, color: colors.brandMarkDark },
 });
