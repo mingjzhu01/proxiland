@@ -403,11 +403,17 @@ export default function EventScreen() {
                 trailed the scroll content, landing mid-screen when the list was short and out of
                 reach when it was long. */}
             <View style={styles.actionFooter}>
-              <Pressable style={styles.checkOutButton} onPress={() => setCheckOutSheetOpen(true)}>
-                <Text style={styles.checkOutButtonText}>Check out</Text>
+              {/* Both identical in treatment — no button, no border, no fill — so the pair reads
+                  as one small utility group rather than two competing actions. The confirm
+                  sheet is what protects Leave event, not visual weight (Ming's call: this
+                  restyle is visual-only — Check out's confirm sheet, added at her request to
+                  guard the same screen position from a mistap mid-scroll, stays). */}
+              <Pressable onPress={() => setCheckOutSheetOpen(true)} style={styles.footerAction} hitSlop={4}>
+                <Text style={styles.footerActionText}>Check out</Text>
               </Pressable>
-              <Pressable onPress={() => setLeaveSheetOpen(true)} disabled={isLeaving} style={styles.leaveLink} hitSlop={4}>
-                <Text style={styles.leaveLinkText}>Leave event</Text>
+              <View style={styles.footerRule} />
+              <Pressable onPress={() => setLeaveSheetOpen(true)} disabled={isLeaving} style={styles.footerAction} hitSlop={4}>
+                <Text style={styles.footerActionText}>Leave event</Text>
               </Pressable>
             </View>
           </>
@@ -542,26 +548,16 @@ const styles = StyleSheet.create({
   actionFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    justifyContent: 'center',
     backgroundColor: colors.brandMarkCream,
     borderTopWidth: 1,
     borderColor: colors.hairline,
     paddingHorizontal: 18,
-    paddingVertical: 12,
+    paddingVertical: 4,
   },
-  checkOutButton: {
-    flex: 1,
-    borderWidth: 1.5,
-    borderColor: colors.brandMarkDark,
-    borderRadius: 999,
-    paddingVertical: 13,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkOutButtonText: { fontFamily: fonts.sansSemibold, fontSize: 14.5, color: colors.brandMarkDark },
-  leaveLink: { paddingVertical: 13, paddingHorizontal: 4, minHeight: 44, justifyContent: 'center' },
-  leaveLinkText: { fontFamily: fonts.sansSemibold, fontSize: 14.5, color: colors.brandInk },
+  footerAction: { paddingHorizontal: 16, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  footerActionText: { fontFamily: fonts.sansSemibold, fontSize: 14, lineHeight: 17, color: colors.brandInk },
+  footerRule: { width: 1, height: 15, backgroundColor: colors.brandSand },
 
   sheetScrim: { flex: 1, backgroundColor: 'rgba(84,66,54,.42)' },
   sheetPanel: {

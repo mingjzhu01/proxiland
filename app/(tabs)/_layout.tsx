@@ -10,11 +10,11 @@ import { IntentStatePrompt } from '../../components/IntentStatePrompt';
 import { EventConnectionsSheet } from '../../components/EventConnectionsSheet';
 import { colors, fonts } from '../../lib/theme';
 
-// Three tabs — Discover · Connections · You — per the discover-events handoff. The bar's
-// geometry (14 top / 20 bottom around a 23px icon + 5px gap + 12px label) is declared so
-// screens can reserve exactly this much at the bottom of their scroll content.
+// Three tabs — Discover · Connections · You. Icon and label read as one unit (no gap between
+// them, label line-height 1) rather than a spaced-out icon-then-caption pair — the bar's own
+// space is fully reserved by the Tabs navigator (tabBarStyle isn't position: 'absolute'), so no
+// screen needs to know this height; nothing outside this file reads these constants.
 const TAB_ICON_SIZE = 23;
-const TAB_BAR_CONTENT_HEIGHT = 14 + TAB_ICON_SIZE + 5 + 15 + 20;
 
 export default function TabsLayout() {
   const { badgeCount } = useRelationships();
@@ -38,16 +38,24 @@ export default function TabsLayout() {
             backgroundColor: colors.tabBar,
             borderTopColor: colors.hairline,
             borderTopWidth: 1,
-            height: TAB_BAR_CONTENT_HEIGHT + insets.bottom,
-            paddingTop: 14,
-            paddingBottom: insets.bottom + 20,
-            paddingHorizontal: 14,
+            paddingTop: 9,
+            paddingBottom: insets.bottom + 11,
+            paddingHorizontal: 10,
           },
-          tabBarItemStyle: { gap: 5 },
+          tabBarItemStyle: { alignItems: 'center', justifyContent: 'center', gap: 0 },
           // Weight is per-state (600 active, 400 inactive), which a static label style can't
-          // express — so the label is rendered rather than styled.
+          // express — so the label is rendered rather than styled. line-height 1 + a small
+          // negative marginTop is what pulls it flush against the icon above it.
           tabBarLabel: ({ focused, color, children }) => (
-            <Text style={{ fontFamily: focused ? fonts.sansSemibold : fonts.sans, fontSize: 12, color }}>
+            <Text
+              style={{
+                fontFamily: focused ? fonts.sansSemibold : fonts.sans,
+                fontSize: 11.5,
+                lineHeight: 11.5,
+                marginTop: -1,
+                color,
+              }}
+            >
               {children}
             </Text>
           ),
