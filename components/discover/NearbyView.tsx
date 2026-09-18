@@ -76,10 +76,13 @@ export function NearbyView({ control }: { control: ReactNode }) {
   const [overlapByUserId, setOverlapByUserId] = useState<Map<string, Overlap>>(new Map());
   // Starts true, not false: on first mount every list-backing array is still empty, so if
   // isLoading started false the very first paint would briefly show ListEmptyComponent (real
-  // height) before load() flips it away a moment later. That empty→loading→loaded height
-  // whiplash is what left the phantom gap above the cards until a manual scroll (pull-to-
-  // refresh) forced FlatList to recompute its layout — starting true skips the flash entirely.
+  // height) before load() flips it away a moment later — that flash is what left a phantom gap
+  // until a manual scroll forced a recompute. Gates ListEmptyComponent only; NOT wired to the
+  // pull-to-refresh spinner below (see isRefreshing) — load() also runs on every tab refocus
+  // (useFocusEffect), and toggling RefreshControl's `refreshing` prop programmatically, without
+  // an actual pull gesture, is its own separate source of the same kind of phantom gap on iOS.
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRevealingBack, setIsRevealingBack] = useState<string | null>(null);
   const [nearbyEvents, setNearbyEvents] = useState<EventSummary[]>([]);
   const [myActiveEvents, setMyActiveEvents] = useState<EventSummary[]>([]);
@@ -91,7 +94,6 @@ export function NearbyView({ control }: { control: ReactNode }) {
   }, []);
 
   const load = useCallback(async () => {
-    setIsLoading(true);
     try {
       const activeVisibility = await getMyActiveVisibility();
       setVisibilityExpiresAt(activeVisibility?.expiresAt ?? null);
@@ -163,16 +165,27 @@ export function NearbyView({ control }: { control: ReactNode }) {
       setIdentityCards(strangerCards.filter((c) => c.identity_visibility === 'full').sort(rankByOverlap));
     } catch {
       // Location permission not granted yet, or scope creation failed — leave feed empty.
-    } finally {
-      setIsLoading(false);
     }
+    // isLoading is owned by load()'s callers (useFocusEffect, handlePullToRefresh), not by
+    // load() itself — it's called from a few other handlers below too (rejoin, reveal-back)
+    // where touching isLoading would be pointless at best.
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      load();
+      setIsLoading(true);
+      load().finally(() => setIsLoading(false));
     }, [load])
   );
+
+  async function handlePullToRefresh() {
+    setIsRefreshing(true);
+    try {
+      await load();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
 
   async function handleAskToConnect(targetUserId: string, connectionLine: string) {
     try {
@@ -320,7 +333,7 @@ export function NearbyView({ control }: { control: ReactNode }) {
       <FlatList
         data={listData}
         keyExtractor={(item) => item.key}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={load} />}
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handlePullToRefresh} />}
         contentContainerStyle={[styles.listContent, { paddingBottom: tabBarHeight + 16 }]}
         ItemSeparatorComponent={ListGap}
         ListHeaderComponent={
