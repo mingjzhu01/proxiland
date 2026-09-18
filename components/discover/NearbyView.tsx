@@ -74,7 +74,12 @@ export function NearbyView({ control }: { control: ReactNode }) {
   const [askedTargetIds, setAskedTargetIds] = useState<Set<string>>(new Set());
   const [connectRequestedIds, setConnectRequestedIds] = useState<Set<string>>(new Set());
   const [overlapByUserId, setOverlapByUserId] = useState<Map<string, Overlap>>(new Map());
-  const [isLoading, setIsLoading] = useState(false);
+  // Starts true, not false: on first mount every list-backing array is still empty, so if
+  // isLoading started false the very first paint would briefly show ListEmptyComponent (real
+  // height) before load() flips it away a moment later. That empty→loading→loaded height
+  // whiplash is what left the phantom gap above the cards until a manual scroll (pull-to-
+  // refresh) forced FlatList to recompute its layout — starting true skips the flash entirely.
+  const [isLoading, setIsLoading] = useState(true);
   const [isRevealingBack, setIsRevealingBack] = useState<string | null>(null);
   const [nearbyEvents, setNearbyEvents] = useState<EventSummary[]>([]);
   const [myActiveEvents, setMyActiveEvents] = useState<EventSummary[]>([]);
