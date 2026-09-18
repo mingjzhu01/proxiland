@@ -8,7 +8,6 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
-import { EventStrip } from '../EventStrip';
 import { AnonCard } from '../AnonCard';
 import { NearbyIdentityCard } from '../NearbyIdentityCard';
 import { Card } from '../Card';
@@ -48,7 +47,6 @@ import { useAuth } from '../../lib/auth';
 import type { Connection } from '../../lib/types';
 
 type ListItem =
-  | { kind: 'peopleHeader'; key: string; count: number }
   | { kind: 'header'; key: string; label: string; count: number }
   | { kind: 'connected'; key: string; connection: Connection }
   | { kind: 'incomingReveal'; key: string; reveal: IncomingRevealRequest }
@@ -282,13 +280,9 @@ export function NearbyView({ control }: { control: ReactNode }) {
       : []),
     ...identityGroup,
   ];
-  const peopleCount = anonCards.length + identityGroup.length;
-  // The "PEOPLE NEARBY" row is a list item (not ListHeaderComponent) so it can be the sticky
-  // index while the event strip above it scrolls away. Omitted when there's no one, so the
-  // empty state can render instead.
-  const listData: ListItem[] =
-    peopleCount > 0 ? [{ kind: 'peopleHeader', key: 'people-header', count: peopleCount }, ...people] : [];
-  const inAnyEvent = myActiveEvents.length > 0;
+  // Nearby is for people: no section header (the title says it), no joined-event strip (Events
+  // owns that list) — cards start straight under the Nearby | Events control.
+  const listData: ListItem[] = people;
 
   return (
     <View style={styles.container}>
@@ -323,17 +317,9 @@ export function NearbyView({ control }: { control: ReactNode }) {
         keyExtractor={(item) => item.key}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={load} />}
         contentContainerStyle={[styles.listContent, { paddingBottom: tabBarHeight + 16 }]}
-        // Index 0 is ListHeaderComponent; 1 is the first data item, the "PEOPLE NEARBY" row.
-        stickyHeaderIndices={[1]}
         ItemSeparatorComponent={ListGap}
         ListHeaderComponent={
           <View>
-            {inAnyEvent ? (
-              <View style={styles.stripWrap}>
-                <EventStrip events={myActiveEvents} onPressEvent={(id) => router.push(`/discover/event/${id}`)} />
-              </View>
-            ) : null}
-
             {joinableNearbyEvents.map((e) => (
               <Pressable
                 key={e.id}
@@ -375,15 +361,6 @@ export function NearbyView({ control }: { control: ReactNode }) {
           )
         }
         renderItem={({ item }) => {
-          if (item.kind === 'peopleHeader') {
-            return (
-              <View style={styles.peopleHeader}>
-                <Text style={styles.eyebrow}>People nearby</Text>
-                <Text style={styles.eyebrow}>{item.count}</Text>
-              </View>
-            );
-          }
-
           if (item.kind === 'header') {
             return (
               <Text style={[styles.eyebrow, styles.subHeader]}>
@@ -506,21 +483,8 @@ const styles = StyleSheet.create({
     lineHeight: 35,
     color: colors.brandMarkDark,
   },
-  listContent: { paddingHorizontal: 18 },
+  listContent: { paddingHorizontal: 18, paddingTop: 4 },
   listGap: { height: 10 },
-  // The strip scrolls edge to edge, so it breaks out of the list's gutter; its own content row
-  // re-applies the gutter so the first chip lines up and the last can scroll to the edge.
-  stripWrap: { marginHorizontal: -18, paddingTop: 14 },
-  // Sticky, so it needs an opaque ground for the cards to scroll under.
-  peopleHeader: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    backgroundColor: colors.brandMarkCream,
-    paddingTop: 14,
-    paddingHorizontal: 2,
-    paddingBottom: 2,
-  },
   eyebrow: {
     fontFamily: fonts.sansSemibold,
     fontSize: 11,

@@ -92,24 +92,17 @@ export function EventsView({ control }: { control: ReactNode }) {
       >
         {events.length === 0 ? (
           <>
+            {/* Zero events: tile + one button, then Create. The label appears exactly once on the
+                screen; the ground below Create is deliberately empty. */}
             <View style={styles.zeroCard}>
               <View style={styles.zeroTile}>
                 <Ionicons name="qr-code" size={32} color={colors.brandMarkCream} />
               </View>
-              <Text style={styles.zeroTitle}>Join an event</Text>
-              <Text style={styles.zeroCopy}>
-                Scan the host's QR code or enter an event code. Trade shows, mixers, house parties.
-              </Text>
               <Pressable style={styles.zeroButton} onPress={() => setJoinOpen(true)}>
                 <Text style={styles.zeroButtonText}>Join an event</Text>
               </Pressable>
             </View>
             <CreateRow compact={false} onPress={() => router.push('/new-event')} />
-            <View style={styles.howDivider} />
-            <Text style={styles.eyebrow}>How events work</Text>
-            <HowRow n={1} title="Get in at the door" copy="The host's QR, an invite link, or a short code." />
-            <HowRow n={2} title="See who's in the room" copy="Top matches first, then what you overlap on." />
-            <HowRow n={3} title="Leave with the connection" copy="Requests you send at an event keep their context." />
           </>
         ) : (
           <>
@@ -119,7 +112,6 @@ export function EventsView({ control }: { control: ReactNode }) {
               </View>
               <View style={styles.joinText}>
                 <Text style={compact ? styles.joinTitleCompact : styles.joinTitle}>Join an event</Text>
-                {!compact ? <Text style={styles.joinCopy}>Scan the host's QR code or enter an event code.</Text> : null}
               </View>
               <Ionicons name="chevron-forward" size={19} color={colors.mutedInk} />
             </Pressable>
@@ -192,20 +184,6 @@ function CreateRow({ compact, onPress }: { compact: boolean; onPress: () => void
   );
 }
 
-function HowRow({ n, title, copy }: { n: number; title: string; copy: string }) {
-  return (
-    <View style={styles.howRow}>
-      <View style={styles.howNumeral}>
-        <Text style={styles.howNumeralText}>{n}</Text>
-      </View>
-      <View style={styles.howText}>
-        <Text style={styles.howTitle}>{title}</Text>
-        <Text style={styles.howCopy}>{copy}</Text>
-      </View>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.brandMarkCream },
   header: { paddingHorizontal: 18 },
@@ -228,15 +206,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.hairline,
     borderRadius: 20,
-    padding: 14,
+    paddingVertical: 15,
+    paddingHorizontal: 14,
   },
   joinCardCompact: { paddingVertical: 10 },
   joinTile: { width: 46, height: 46, borderRadius: 14, backgroundColor: colors.brandMarkDark, alignItems: 'center', justifyContent: 'center' },
   joinTileCompact: { width: 40, height: 40, borderRadius: 12 },
-  joinText: { flex: 1 },
+  joinText: { flex: 1, justifyContent: 'center' },
   joinTitle: { fontFamily: fonts.wordmark, fontSize: 21, lineHeight: 25, color: colors.brandMarkDark },
   joinTitleCompact: { fontFamily: fonts.sansSemibold, fontSize: 16.5, color: colors.brandMarkDark },
-  joinCopy: { fontFamily: fonts.sans, fontSize: 13.5, lineHeight: 19, color: colors.brandInk, marginTop: 4 },
 
   createRow: {
     flexDirection: 'row',
@@ -289,21 +267,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.hairline,
     borderRadius: 22,
-    paddingVertical: 24,
+    paddingVertical: 28,
     paddingHorizontal: 20,
     alignItems: 'center',
-    gap: 13,
+    gap: 18,
   },
   zeroTile: { width: 62, height: 62, borderRadius: 18, backgroundColor: colors.brandMarkDark, alignItems: 'center', justifyContent: 'center' },
-  zeroTitle: { fontFamily: fonts.wordmark, fontSize: 25, lineHeight: 29, color: colors.brandMarkDark },
-  zeroCopy: { fontFamily: fonts.sans, fontSize: 14.5, lineHeight: 21, color: colors.brandInk, textAlign: 'center', maxWidth: 270 },
   zeroButton: { alignSelf: 'stretch', backgroundColor: colors.brandMarkDark, borderRadius: 999, padding: 15, alignItems: 'center' },
   zeroButtonText: { fontFamily: fonts.sansSemibold, fontSize: 15.5, color: colors.brandMarkCream },
-  howDivider: { height: 1, backgroundColor: colors.hairline, marginTop: 18, marginBottom: 6 },
-  howRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', paddingVertical: 4 },
-  howNumeral: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.insetPill, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
-  howNumeralText: { fontFamily: fonts.sansSemibold, fontSize: 13, color: colors.brandMarkDark },
-  howText: { flex: 1 },
-  howTitle: { fontFamily: fonts.sansSemibold, fontSize: 15.5, color: colors.brandMarkDark },
-  howCopy: { fontFamily: fonts.sans, fontSize: 13.5, lineHeight: 19, color: colors.brandInk, marginTop: 2 },
 });
