@@ -6,7 +6,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, ScrollView, StyleSheet, RefreshControl, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { LetteredAvatar } from '../../components/LetteredAvatar';
 import { RelationshipPill } from '../../components/RelationshipPill';
 import { useRelationships, resolveConnectionId } from '../../lib/relationships';
@@ -33,7 +32,6 @@ function meetingLine(r: ConnectionRequest): string | null {
 export default function Connections() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
   const toast = useToast();
   const rel = useRelationships();
   const [eventNames, setEventNames] = useState<Map<string, string>>(new Map());
@@ -126,7 +124,7 @@ export default function Connections() {
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.body, { paddingBottom: tabBarHeight + 16 }]}
+        contentContainerStyle={[styles.body, { paddingBottom: 16 }]}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={() => setIsRefreshing(true)} />}
       >
         {requestCount > 0 ? (

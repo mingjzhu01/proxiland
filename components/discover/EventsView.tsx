@@ -8,7 +8,6 @@ import { View, Text, Pressable, ScrollView, StyleSheet, RefreshControl } from 'r
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { getMyActiveEvents, type EventSummary } from '../../lib/api/events';
 import { JoinEventSheet } from '../JoinEventSheet';
 import { colors, fonts } from '../../lib/theme';
@@ -53,7 +52,6 @@ function whenLine(event: EventSummary): string | null {
 export function EventsView({ control }: { control: ReactNode }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
@@ -87,7 +85,7 @@ export function EventsView({ control }: { control: ReactNode }) {
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.body, { paddingBottom: tabBarHeight + 16 }]}
+        contentContainerStyle={[styles.body, { paddingBottom: 16 }]}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={load} />}
       >
         {events.length === 0 ? (

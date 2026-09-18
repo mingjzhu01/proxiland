@@ -7,7 +7,6 @@ import { View, FlatList, Text, Pressable, StyleSheet, RefreshControl, Alert } fr
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { AnonCard } from '../AnonCard';
 import { NearbyIdentityCard } from '../NearbyIdentityCard';
 import { Card } from '../Card';
@@ -58,7 +57,6 @@ type ListItem =
 export function NearbyView({ control }: { control: ReactNode }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
   const { hasProfile, isDemo } = useAuth();
   const [visibilityExpiresAt, setVisibilityExpiresAt] = useState<string | null>(null);
   const [visibilitySheetOpen, setVisibilitySheetOpen] = useState(false);
@@ -334,7 +332,7 @@ export function NearbyView({ control }: { control: ReactNode }) {
         data={listData}
         keyExtractor={(item) => item.key}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handlePullToRefresh} />}
-        contentContainerStyle={[styles.listContent, { paddingBottom: tabBarHeight + 16 }]}
+        contentContainerStyle={[styles.listContent, { paddingBottom: 16 }]}
         ItemSeparatorComponent={ListGap}
         ListHeaderComponent={
           <View>

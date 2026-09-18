@@ -8,7 +8,6 @@ import { View, Text, ScrollView, TextInput, Pressable, StyleSheet, Alert, Activi
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { EventAttendeeCard } from '../../../../../components/EventAttendeeCard';
 import { EventFeedbackSheet } from '../../../../../components/EventFeedbackSheet';
 import { EVENT_INTENT_DEFAULTS } from '../../../../../lib/eventIntentConfig';
@@ -51,7 +50,6 @@ export default function EventScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
   const toast = useToast();
   const rel = useRelationships();
   const { setActiveEvent } = useActiveEvent();
@@ -70,6 +68,8 @@ export default function EventScreen() {
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [leaveSheetOpen, setLeaveSheetOpen] = useState(false);
+  const [checkOutSheetOpen, setCheckOutSheetOpen] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [busyUserId, setBusyUserId] = useState<string | null>(null);
 
   const load = useCallback(
@@ -156,14 +156,19 @@ export default function EventScreen() {
     }
   }
 
-  async function handleCheckOut() {
+  async function confirmCheckOut() {
+    setIsCheckingOut(true);
     try {
       await checkOutOfEvent(id);
       logSessionEvent('event_checked_out', { scopeId: id });
+      setCheckOutSheetOpen(false);
       setShowFeedback(true);
       await load(false);
     } catch (error: any) {
+      setCheckOutSheetOpen(false);
       Alert.alert('Could not check out', error.message ?? String(error));
+    } finally {
+      setIsCheckingOut(false);
     }
   }
 
@@ -397,8 +402,8 @@ export default function EventScreen() {
             {/* Pinned above the tab bar at every list length and on every tab — previously these
                 trailed the scroll content, landing mid-screen when the list was short and out of
                 reach when it was long. */}
-            <View style={[styles.actionFooter, { paddingBottom: 12 + tabBarHeight }]}>
-              <Pressable style={styles.checkOutButton} onPress={handleCheckOut}>
+            <View style={styles.actionFooter}>
+              <Pressable style={styles.checkOutButton} onPress={() => setCheckOutSheetOpen(true)}>
                 <Text style={styles.checkOutButtonText}>Check out</Text>
               </Pressable>
               <Pressable onPress={() => setLeaveSheetOpen(true)} disabled={isLeaving} style={styles.leaveLink} hitSlop={4}>
@@ -421,6 +426,25 @@ export default function EventScreen() {
           </Pressable>
           <Pressable style={styles.sheetSecondary} onPress={() => setLeaveSheetOpen(false)} disabled={isLeaving}>
             <Text style={styles.sheetSecondaryText}>Stay</Text>
+          </Pressable>
+        </View>
+      </Modal>
+
+      {/* Check out doesn't need the app's "this destroys something" confirmation copy — it's
+          fully reversible, you can check back in any time — but it does need a way to catch a
+          mistap, since it sits right where a scroll-stopping thumb tends to land. */}
+      <Modal visible={checkOutSheetOpen} transparent animationType="slide" onRequestClose={() => setCheckOutSheetOpen(false)}>
+        <Pressable style={styles.sheetScrim} onPress={() => setCheckOutSheetOpen(false)} accessibilityLabel="Close" />
+        <View style={[styles.sheetPanel, { paddingBottom: insets.bottom + 18 }]}>
+          <Text style={styles.sheetTitle}>Check out of {event.name ?? 'this event'}?</Text>
+          <Text style={styles.sheetBody}>
+            You'll stop showing up to other attendees until you check in again. You can check back in any time.
+          </Text>
+          <Pressable style={styles.sheetPrimary} onPress={confirmCheckOut} disabled={isCheckingOut}>
+            <Text style={styles.sheetPrimaryText}>{isCheckingOut ? 'Checking out…' : 'Check out'}</Text>
+          </Pressable>
+          <Pressable style={styles.sheetSecondary} onPress={() => setCheckOutSheetOpen(false)} disabled={isCheckingOut}>
+            <Text style={styles.sheetSecondaryText}>Stay checked in</Text>
           </Pressable>
         </View>
       </Modal>
@@ -523,7 +547,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: colors.hairline,
     paddingHorizontal: 18,
-    paddingTop: 12,
+    paddingVertical: 12,
   },
   checkOutButton: {
     flex: 1,
